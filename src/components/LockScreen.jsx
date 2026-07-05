@@ -1,12 +1,21 @@
-import { useState } from 'react'
-import { Lock, User } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Lock, User, Fingerprint } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import { canUseBiometrics } from '../lib/biometric'
 
 export default function LockScreen() {
   const { auth, unlock, logout } = useAppStore()
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [bioAvailable, setBioAvailable] = useState(false)
+
+  const user = auth.users[auth.currentUser]
+  const biometricEnabled = user?.biometricEnabled
+
+  useEffect(() => {
+    setBioAvailable(canUseBiometrics())
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -19,6 +28,18 @@ export default function LockScreen() {
     } catch (err) {
       setError(err.message)
       setPin('')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBiometric = async () => {
+    setError('')
+    setLoading(true)
+    try {
+      await unlock(null, { biometric: true })
+    } catch (err) {
+      setError(err.message)
     } finally {
       setLoading(false)
     }
@@ -57,6 +78,16 @@ export default function LockScreen() {
             {loading ? 'Unlocking...' : 'Unlock'}
           </button>
         </form>
+
+        {bioAvailable && biometricEnabled && (
+          <button
+            onClick={handleBiometric}
+            disabled={loading}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-outline-variant bg-surface py-3 text-sm font-medium text-on-surface disabled:opacity-50"
+          >
+            <Fingerprint size={18} /> Use Biometric
+          </button>
+        )}
 
         <button
           onClick={logout}

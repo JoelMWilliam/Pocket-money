@@ -5,12 +5,13 @@ import { formatLKR, getCurrentMonth } from '../lib/utils'
 import TransactionItem from './TransactionItem'
 
 export default function Dashboard({ setScreen }) {
-  const { accounts, transactions, goals, budgets, categories, getMonthlyTotals, getTotalBalance } =
+  const { auth, accounts, transactions, goals, budgets, categories, getMonthlyTotals, getTotalBalance } =
     useAppStore()
 
   const totalBalance = getTotalBalance()
   const { income, expense } = getMonthlyTotals(getCurrentMonth())
   const recentTransactions = transactions.slice(0, 5)
+  const greeting = auth.currentUser ? `Good day, ${auth.currentUser}` : 'Good day'
 
   const insights = useMemo(() => {
     const month = getCurrentMonth()
@@ -58,7 +59,7 @@ export default function Dashboard({ setScreen }) {
     <div className="animate-fade-in px-4 pt-6">
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <p className="text-sm text-on-surface-variant">Good day</p>
+          <p className="text-sm text-on-surface-variant">{greeting}</p>
           <h1 className="text-2xl font-bold text-on-surface">Pocket Money</h1>
         </div>
         <button
@@ -225,7 +226,7 @@ export default function Dashboard({ setScreen }) {
         <div className="space-y-2">
           {recentTransactions.length > 0 ? (
             recentTransactions.map((t) => (
-              <TransactionItem key={t.id} transaction={t} />
+              <TransactionItem key={t.id} transaction={t} onClick={() => setScreen('transactions')} />
             ))
           ) : (
             <p className="py-8 text-center text-sm text-on-surface-variant">No transactions yet.</p>

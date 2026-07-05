@@ -51,9 +51,15 @@ export default function Accounts() {
     e.preventDefault()
     const data = {
       ...form,
+      initialBalance: Number(form.balance) || 0,
       balance: Number(form.balance) || 0
     }
     if (editing) {
+      const old = accounts.find((a) => a.id === editing.id)
+      const oldInitial = old?.initialBalance || 0
+      const newInitial = data.initialBalance
+      // preserve transaction-calculated delta when editing initial balance
+      data.balance = (old?.balance || 0) - oldInitial + newInitial
       updateAccount(editing.id, data)
     } else {
       addAccount(data)

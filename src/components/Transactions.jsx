@@ -237,8 +237,14 @@ export default function Transactions() {
       )}
 
       {showFilters && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant">
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowFilters(false)}
+        >
+          <div
+            className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-on-surface">Filters</h2>
               <button
@@ -249,7 +255,7 @@ export default function Transactions() {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="max-h-[60vh] space-y-4 overflow-y-auto">
               <div>
                 <label className="mb-1 block text-xs font-medium text-on-surface-variant">Type</label>
                 <select

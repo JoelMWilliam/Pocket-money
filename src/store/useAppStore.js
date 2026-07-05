@@ -17,6 +17,8 @@ import { getCloudToken, setCloudToken, getCloudUser, setCloudUser, cloudSync } f
 import { generateId, getCurrentMonth } from '../lib/utils'
 import { sanitizeText, sanitizeTags } from '../lib/sanitize'
 import { deleteTransactionReceipts, inlineReceipts, extractReceipts, migrateReceiptsToIndexedDB } from '../lib/receipts'
+import { canUseBiometrics, registerBiometric, verifyBiometric } from '../lib/biometric'
+import { storageGet, storageSet } from '../lib/storage'
 
 const LOCK_TIMEOUT = 5 * 60 * 1000 // 5 minutes
 
@@ -80,6 +82,14 @@ function getEmptyUserData() {
   }
 }
 
+function withPersist(get, fn) {
+  return async (...args) => {
+    const result = await fn(...args)
+    await get().persistUserData()
+    return result
+  }
+}
+
 export const useAppStore = create(
   persist(
     (set, get) => ({
@@ -125,6 +135,7 @@ export const useAppStore = create(
 
         get().recalculateBalances()
         get().rolloverBudgets()
+        await get().persistUserData()
       },
 
       login: async (username, pin) => {
@@ -133,6 +144,7 @@ export const useAppStore = create(
         const valid = await verifyPin(pin, user.pinHash)
         if (!valid) throw new Error('Invalid PIN')
 
+        await get().loadUserData(username)
         const userData = get().usersData[username] || getEmptyUserData()
         await migrateReceiptsToIndexedDB(userData.transactions || [])
         set((state) => ({
@@ -163,10 +175,23 @@ export const useAppStore = create(
         }))
       },
 
-      unlock: async (pin) => {
+      unlock: async (pin, options = {}) => {
         const { auth } = get()
         const user = auth.users[auth.currentUser]
         if (!user) throw new Error('No active user')
+
+        if (options.biometric && user.biometricEnabled) {
+          try {
+            await verifyBiometric(user.biometricCredentialId)
+            set((state) => ({
+              auth: { ...state.auth, isLocked: false, lockAt: null }
+            }))
+            return
+          } catch (err) {
+            throw new Error('Biometric verification failed')
+          }
+        }
+
         const valid = await verifyPin(pin, user.pinHash)
         if (!valid) throw new Error('Invalid PIN')
 
@@ -175,8 +200,30 @@ export const useAppStore = create(
         }))
       },
 
+      enableBiometric: async () => {
+        const { auth } = get()
+        const username = auth.currentUser
+        if (!username) throw new Error('No active user')
+        const credentialId = await registerBiometric(username)
+        get().updateUserSettings(username, {
+          biometricEnabled: true,
+          biometricCredentialId: credentialId
+        })
+      },
+
+      disableBiometric: () => {
+        const { auth } = get()
+        const username = auth.currentUser
+        if (!username) return
+        get().updateUserSettings(username, {
+          biometricEnabled: false,
+          biometricCredentialId: null
+        })
+      },
+
       switchUser: async (username) => {
         get().saveCurrentUserData()
+        await get().loadUserData(username)
         const userData = get().usersData[username] || getEmptyUserData()
         await migrateReceiptsToIndexedDB(userData.transactions || [])
         set((state) => ({
@@ -210,6 +257,22 @@ export const useAppStore = create(
         }))
       },
 
+      persistUserData: async () => {
+        get().saveCurrentUserData()
+        const { auth, usersData } = get()
+        if (!auth.currentUser) return
+        await storageSet(`userdata-${auth.currentUser}`, usersData[auth.currentUser])
+      },
+
+      loadUserData: async (username) => {
+        const data = await storageGet(`userdata-${username}`, null)
+        if (data) {
+          set((state) => ({
+            usersData: { ...state.usersData, [username]: data }
+          }))
+        }
+      },
+
       updateUserSettings: (username, patch) => {
         set((state) => ({
           auth: {
@@ -220,6 +283,7 @@ export const useAppStore = create(
             }
           }
         }))
+        get().persistUserData()
       },
 
       deleteUser: (username) => {
@@ -235,6 +299,8 @@ export const useAppStore = create(
             usersData: remainingData
           }
         })
+        storageRemove(`userdata-${username}`)
+        get().persistUserData()
       },
 
       // Cloud sync state
@@ -310,6 +376,7 @@ export const useAppStore = create(
             get().recalculateBalances()
             get().rolloverBudgets()
             get().saveCurrentUserData()
+            await get().persistUserData()
           }
           set({ lastSyncAt: new Date().toISOString(), syncStatus: 'idle' })
         } catch (err) {
@@ -319,35 +386,55 @@ export const useAppStore = create(
       },
 
       // === Settings ===
-      updateSettings: (patch) =>
-        set((state) => ({ settings: { ...state.settings, ...patch } })),
+      updateSettings: (patch) => {
+        set((state) => ({ settings: { ...state.settings, ...patch } }))
+        get().persistUserData()
+      },
 
       // === Accounts ===
       addAccount: (account) => {
         const clean = { ...account, name: sanitizeText(account.name, 100) }
-        set((state) => ({ accounts: [...state.accounts, { ...clean, id: generateId() }] }))
+        const initialBalance = Number(clean.initialBalance) || Number(clean.balance) || 0
+        set((state) => ({
+          accounts: [
+            ...state.accounts,
+            { ...clean, id: generateId(), initialBalance, balance: initialBalance }
+          ]
+        }))
+        get().recalculateBalances()
+        get().persistUserData()
       },
-      updateAccount: (id, patch) =>
+      updateAccount: (id, patch) => {
         set((state) => ({
           accounts: state.accounts.map((a) => {
             if (a.id !== id) return a
             const updated = { ...a, ...patch }
             if (updated.name !== undefined) updated.name = sanitizeText(updated.name, 100)
+            if (updated.initialBalance !== undefined && updated.balance === a.balance) {
+              updated.balance = updated.initialBalance
+            }
             return updated
           })
-        })),
-      deleteAccount: (id) =>
+        }))
+        get().recalculateBalances()
+        get().persistUserData()
+      },
+      deleteAccount: (id) => {
         set((state) => ({
           accounts: state.accounts.filter((a) => a.id !== id),
           transactions: state.transactions.filter((t) => t.accountId !== id && t.transferTo !== id)
-        })),
+        }))
+        get().recalculateBalances()
+        get().persistUserData()
+      },
 
       // === Categories ===
       addCategory: (category) => {
         const clean = { ...category, name: sanitizeText(category.name, 100) }
         set((state) => ({ categories: [...state.categories, { ...clean, id: generateId() }] }))
+        get().persistUserData()
       },
-      updateCategory: (id, patch) =>
+      updateCategory: (id, patch) => {
         set((state) => ({
           categories: state.categories.map((c) => {
             if (c.id !== id) return c
@@ -355,12 +442,16 @@ export const useAppStore = create(
             if (updated.name !== undefined) updated.name = sanitizeText(updated.name, 100)
             return updated
           })
-        })),
-      deleteCategory: (id) =>
+        }))
+        get().persistUserData()
+      },
+      deleteCategory: (id) => {
         set((state) => ({
           categories: state.categories.filter((c) => c.id !== id),
           transactions: state.transactions.filter((t) => t.categoryId !== id)
-        })),
+        }))
+        get().persistUserData()
+      },
 
       // === Transactions ===
       addTransaction: (transaction) => {
@@ -370,13 +461,17 @@ export const useAppStore = create(
         newTx = get().applyRulesToTransaction(newTx)
         if (newTx.type !== 'transfer') newTx.transferTo = undefined
         if (newTx.type !== 'expense') newTx.splits = undefined
-        set((state) => ({ transactions: [newTx, ...state.transactions] }))
+        set((state) => {
+          const next = { transactions: [newTx, ...state.transactions] }
+          return next
+        })
         get().recalculateBalances()
+        get().persistUserData()
         return newTx
       },
       updateTransaction: (id, patch) => {
-        set((state) => ({
-          transactions: state.transactions.map((t) => {
+        set((state) => {
+          const nextTransactions = state.transactions.map((t) => {
             if (t.id !== id) return t
             const updated = { ...t, ...patch }
             if (updated.note !== undefined) updated.note = sanitizeText(updated.note, 500)
@@ -389,8 +484,10 @@ export const useAppStore = create(
             }
             return updated
           })
-        }))
+          return { transactions: nextTransactions }
+        })
         get().recalculateBalances()
+        get().persistUserData()
       },
       deleteTransaction: async (id) => {
         const tx = get().transactions.find((t) => t.id === id)
@@ -399,6 +496,7 @@ export const useAppStore = create(
           transactions: state.transactions.filter((t) => t.id !== id)
         }))
         get().recalculateBalances()
+        get().persistUserData()
       },
       bulkDeleteTransactions: async (ids) => {
         const toDelete = get().transactions.filter((t) => ids.includes(t.id))
@@ -409,28 +507,36 @@ export const useAppStore = create(
           transactions: state.transactions.filter((t) => !ids.includes(t.id))
         }))
         get().recalculateBalances()
+        get().persistUserData()
       },
       bulkUpdateTransactions: (ids, patch) => {
         set((state) => ({
           transactions: state.transactions.map((t) => (ids.includes(t.id) ? { ...t, ...patch } : t))
         }))
         get().recalculateBalances()
+        get().persistUserData()
       },
 
       // === Budgets ===
-      addBudget: (budget) =>
+      addBudget: (budget) => {
         set((state) => ({
           budgets: [
             ...state.budgets,
             { ...budget, id: generateId(), rollover: budget.rollover ?? false, rolloverAmount: budget.rolloverAmount ?? 0 }
           ]
-        })),
-      updateBudget: (id, patch) =>
+        }))
+        get().persistUserData()
+      },
+      updateBudget: (id, patch) => {
         set((state) => ({
           budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...patch } : b))
-        })),
-      deleteBudget: (id) =>
-        set((state) => ({ budgets: state.budgets.filter((b) => b.id !== id) })),
+        }))
+        get().persistUserData()
+      },
+      deleteBudget: (id) => {
+        set((state) => ({ budgets: state.budgets.filter((b) => b.id !== id) }))
+        get().persistUserData()
+      },
 
       rolloverBudgets: () => {
         const { budgets, transactions, settings } = get()
@@ -461,44 +567,52 @@ export const useAppStore = create(
       },
 
       // === Goals ===
-      addGoal: (goal) =>
-        set((state) => ({ goals: [...state.goals, { ...goal, id: generateId() }] })),
-      updateGoal: (id, patch) =>
+      addGoal: (goal) => {
+        set((state) => ({ goals: [...state.goals, { ...goal, id: generateId() }] }))
+        get().persistUserData()
+      },
+      updateGoal: (id, patch) => {
         set((state) => ({
           goals: state.goals.map((g) => (g.id === id ? { ...g, ...patch } : g))
-        })),
-      deleteGoal: (id) =>
-        set((state) => ({ goals: state.goals.filter((g) => g.id !== id) })),
+        }))
+        get().persistUserData()
+      },
+      deleteGoal: (id) => {
+        set((state) => ({ goals: state.goals.filter((g) => g.id !== id) }))
+        get().persistUserData()
+      },
 
       // === Debts ===
-      addDebt: (debt) =>
-        set((state) => ({ debts: [...state.debts, { ...debt, id: generateId() }] })),
-      updateDebt: (id, patch) =>
+      addDebt: (debt) => {
+        set((state) => ({ debts: [...state.debts, { ...debt, id: generateId() }] }))
+        get().persistUserData()
+      },
+      updateDebt: (id, patch) => {
         set((state) => ({
           debts: state.debts.map((d) => (d.id === id ? { ...d, ...patch } : d))
-        })),
-      deleteDebt: (id) =>
-        set((state) => ({ debts: state.debts.filter((d) => d.id !== id) })),
+        }))
+        get().persistUserData()
+      },
+      deleteDebt: (id) => {
+        set((state) => ({ debts: state.debts.filter((d) => d.id !== id) }))
+        get().persistUserData()
+      },
 
       // === Recurring ===
-      addRecurring: (recurring) =>
-        set((state) => ({ recurring: [...state.recurring, { ...recurring, id: generateId() }] })),
-      updateRecurring: (id, patch) =>
+      addRecurring: (recurring) => {
+        set((state) => ({ recurring: [...state.recurring, { ...recurring, id: generateId() }] }))
+        get().persistUserData()
+      },
+      updateRecurring: (id, patch) => {
         set((state) => ({
           recurring: state.recurring.map((r) => (r.id === id ? { ...r, ...patch } : r))
-        })),
-      deleteRecurring: (id) =>
-        set((state) => ({ recurring: state.recurring.filter((r) => r.id !== id) })),
-
-      // === Recurring ===
-      addRecurring: (recurring) =>
-        set((state) => ({ recurring: [...state.recurring, { ...recurring, id: generateId() }] })),
-      updateRecurring: (id, patch) =>
-        set((state) => ({
-          recurring: state.recurring.map((r) => (r.id === id ? { ...r, ...patch } : r))
-        })),
-      deleteRecurring: (id) =>
-        set((state) => ({ recurring: state.recurring.filter((r) => r.id !== id) })),
+        }))
+        get().persistUserData()
+      },
+      deleteRecurring: (id) => {
+        set((state) => ({ recurring: state.recurring.filter((r) => r.id !== id) }))
+        get().persistUserData()
+      },
 
       generateRecurringTransactions: (untilDate) => {
         const { recurring, addTransaction, updateRecurring } = get()
@@ -539,44 +653,68 @@ export const useAppStore = create(
       },
 
       // === Investments ===
-      addInvestment: (investment) =>
-        set((state) => ({ investments: [...state.investments, { ...investment, id: generateId() }] })),
-      updateInvestment: (id, patch) =>
+      addInvestment: (investment) => {
+        set((state) => ({ investments: [...state.investments, { ...investment, id: generateId() }] }))
+        get().persistUserData()
+      },
+      updateInvestment: (id, patch) => {
         set((state) => ({
           investments: state.investments.map((i) => (i.id === id ? { ...i, ...patch } : i))
-        })),
-      deleteInvestment: (id) =>
-        set((state) => ({ investments: state.investments.filter((i) => i.id !== id) })),
+        }))
+        get().persistUserData()
+      },
+      deleteInvestment: (id) => {
+        set((state) => ({ investments: state.investments.filter((i) => i.id !== id) }))
+        get().persistUserData()
+      },
 
       // === Loans ===
-      addLoan: (loan) =>
-        set((state) => ({ loans: [...state.loans, { ...loan, id: generateId() }] })),
-      updateLoan: (id, patch) =>
+      addLoan: (loan) => {
+        set((state) => ({ loans: [...state.loans, { ...loan, id: generateId() }] }))
+        get().persistUserData()
+      },
+      updateLoan: (id, patch) => {
         set((state) => ({
           loans: state.loans.map((l) => (l.id === id ? { ...l, ...patch } : l))
-        })),
-      deleteLoan: (id) =>
-        set((state) => ({ loans: state.loans.filter((l) => l.id !== id) })),
+        }))
+        get().persistUserData()
+      },
+      deleteLoan: (id) => {
+        set((state) => ({ loans: state.loans.filter((l) => l.id !== id) }))
+        get().persistUserData()
+      },
 
       // === Templates ===
-      addTemplate: (template) =>
-        set((state) => ({ templates: [...state.templates, { ...template, id: generateId() }] })),
-      updateTemplate: (id, patch) =>
+      addTemplate: (template) => {
+        set((state) => ({ templates: [...state.templates, { ...template, id: generateId() }] }))
+        get().persistUserData()
+      },
+      updateTemplate: (id, patch) => {
         set((state) => ({
           templates: state.templates.map((t) => (t.id === id ? { ...t, ...patch } : t))
-        })),
-      deleteTemplate: (id) =>
-        set((state) => ({ templates: state.templates.filter((t) => t.id !== id) })),
+        }))
+        get().persistUserData()
+      },
+      deleteTemplate: (id) => {
+        set((state) => ({ templates: state.templates.filter((t) => t.id !== id) }))
+        get().persistUserData()
+      },
 
       // === Rules ===
-      addRule: (rule) =>
-        set((state) => ({ rules: [...state.rules, { ...rule, id: generateId() }] })),
-      updateRule: (id, patch) =>
+      addRule: (rule) => {
+        set((state) => ({ rules: [...state.rules, { ...rule, id: generateId() }] }))
+        get().persistUserData()
+      },
+      updateRule: (id, patch) => {
         set((state) => ({
           rules: state.rules.map((r) => (r.id === id ? { ...r, ...patch } : r))
-        })),
-      deleteRule: (id) =>
-        set((state) => ({ rules: state.rules.filter((r) => r.id !== id) })),
+        }))
+        get().persistUserData()
+      },
+      deleteRule: (id) => {
+        set((state) => ({ rules: state.rules.filter((r) => r.id !== id) }))
+        get().persistUserData()
+      },
       applyRulesToTransaction: (transaction) => {
         const { rules, categories } = get()
         let updated = { ...transaction }
@@ -602,14 +740,20 @@ export const useAppStore = create(
       },
 
       // === Bulk import / reset ===
-      replaceState: (newState) => set({ ...getEmptyUserData(), ...newState }),
-      resetToDemo: () => set(getInitialUserData()),
+      replaceState: (newState) => {
+        set({ ...getEmptyUserData(), ...newState })
+        get().persistUserData()
+      },
+      resetToDemo: () => {
+        set(getInitialUserData())
+        get().persistUserData()
+      },
 
       // === Derived calculations ===
       recalculateBalances: () => {
         const { accounts, transactions } = get()
         const updated = accounts.map((account) => {
-          let balance = 0
+          let balance = account.initialBalance || 0
           transactions.forEach((t) => {
             if (t.accountId === account.id) {
               if (t.type === 'income') balance += t.amount

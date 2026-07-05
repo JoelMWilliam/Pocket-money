@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, formatShortDate } from '../lib/utils'
@@ -8,6 +8,7 @@ import * as LucideIcons from 'lucide-react'
 export default function TransactionItem({ transaction, onClick, onDelete }) {
   const { accounts, categories } = useAppStore()
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
   const account = accounts.find((a) => a.id === transaction.accountId)
   const category = categories.find((c) => c.id === transaction.categoryId)
 
@@ -23,6 +24,22 @@ export default function TransactionItem({ transaction, onClick, onDelete }) {
   if (isIncome) amountClass = 'text-primary'
   if (isExpense) amountClass = 'text-on-surface'
   if (isTransfer) amountClass = 'text-on-surface-variant'
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false)
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('touchstart', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [menuOpen])
 
   return (
     <div className="relative">
@@ -87,7 +104,11 @@ export default function TransactionItem({ transaction, onClick, onDelete }) {
       </button>
 
       {menuOpen && (
-        <div className="absolute right-0 top-12 z-20 w-36 rounded-2xl bg-surface p-2 shadow-xl border border-outline-variant">
+        <div
+          ref={menuRef}
+          className="absolute right-2 top-14 z-50 w-36 rounded-2xl bg-surface p-2 shadow-xl border border-outline-variant"
+          style={{ transform: 'translateZ(0)' }}
+        >
           <button
             onClick={() => { setMenuOpen(false); onClick() }}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-on-surface hover:bg-surface-bright"

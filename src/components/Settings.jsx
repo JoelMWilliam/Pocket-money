@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Moon,
   Palette,
@@ -19,7 +19,8 @@ import {
   Cloud,
   ArrowUp,
   ArrowDown,
-  HeartPulse
+  HeartPulse,
+  Fingerprint
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { PRESET_COLORS } from '../lib/theme'
@@ -33,6 +34,7 @@ import {
 import { extractReceipts, inlineReceipts } from '../lib/receipts'
 import { shareFile } from '../lib/share'
 import { cloudAuth } from '../lib/api'
+import { canUseBiometrics } from '../lib/biometric'
 
 export default function Settings() {
   const {
@@ -61,7 +63,9 @@ export default function Settings() {
     setCloudCredentials,
     clearCloudCredentials,
     syncToCloud,
-    syncFromCloud
+    syncFromCloud,
+    enableBiometric,
+    disableBiometric
   } = useAppStore()
 
   const [showCloud, setShowCloud] = useState(false)
@@ -69,6 +73,24 @@ export default function Settings() {
   const [cloudError, setCloudError] = useState('')
   const [syncMsg, setSyncMsg] = useState('')
   const [health, setHealth] = useState(null)
+  const [bioAvailable, setBioAvailable] = useState(false)
+  const [bioEnabling, setBioEnabling] = useState(false)
+
+  useEffect(() => {
+    setBioAvailable(canUseBiometrics())
+  }, [])
+
+  const handleEnableBiometric = async () => {
+    setBioEnabling(true)
+    try {
+      await enableBiometric()
+      alert('Biometric authentication enabled.')
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setBioEnabling(false)
+    }
+  }
 
   const [showTheme, setShowTheme] = useState(false)
   const [showUsers, setShowUsers] = useState(false)
@@ -351,6 +373,33 @@ export default function Settings() {
           </div>
           <ChevronRight size={16} className="text-on-surface-variant" />
         </button>
+
+        <div className="my-1 h-px bg-outline-variant" />
+
+        {bioAvailable && (
+          <button
+            onClick={auth.users[auth.currentUser]?.biometricEnabled ? disableBiometric : handleEnableBiometric}
+            disabled={bioEnabling}
+            className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright disabled:opacity-50"
+          >
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-primary-container p-2 text-primary">
+                <Fingerprint size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-on-surface">
+                  {auth.users[auth.currentUser]?.biometricEnabled ? 'Disable Biometric' : 'Enable Biometric'}
+                </p>
+                <p className="text-xs text-on-surface-variant">
+                  {auth.users[auth.currentUser]?.biometricEnabled
+                    ? 'Use PIN instead of fingerprint/face'
+                    : 'Unlock with fingerprint or face recognition'}
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-on-surface-variant" />
+          </button>
+        )}
 
         <div className="my-1 h-px bg-outline-variant" />
 

@@ -1,4 +1,4 @@
-import { BarChart3, TrendingDown, Calendar, Scale, Settings, X, LayoutTemplate, FileSpreadsheet, ShieldCheck, BarChart4, TrendingUp, ArrowRightLeft, Receipt } from 'lucide-react'
+import { BarChart3, TrendingDown, Calendar, Scale, Settings, X, LayoutTemplate, FileSpreadsheet, ShieldCheck, BarChart4, TrendingUp, ArrowRightLeft, Receipt, MessageSquare } from 'lucide-react'
 
 const MORE_ITEMS = [
   { id: 'analytics', label: 'Analytics', icon: BarChart3, desc: 'Spending insights' },
@@ -12,10 +12,11 @@ const MORE_ITEMS = [
   { id: 'templates', label: 'Templates', icon: LayoutTemplate, desc: 'Quick transactions' },
   { id: 'rules', label: 'Rules', icon: ShieldCheck, desc: 'Auto-categorize' },
   { id: 'import', label: 'Import', icon: FileSpreadsheet, desc: 'CSV import' },
+  { id: 'sms', label: 'SMS', icon: MessageSquare, desc: 'Import from SMS', isAction: true },
   { id: 'settings', label: 'Settings', icon: Settings, desc: 'Preferences' }
 ]
 
-export default function MoreMenu({ current, onChange, onClose }) {
+export default function MoreMenu({ current, onChange, onClose, onAction }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 backdrop-blur-sm">
       <div className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant">
@@ -33,7 +34,11 @@ export default function MoreMenu({ current, onChange, onClose }) {
               <button
                 key={item.id}
                 onClick={() => {
-                  onChange(item.id)
+                  if (item.isAction) {
+                    onAction?.(item.id)
+                  } else {
+                    onChange(item.id)
+                  }
                   onClose()
                 }}
                 className={`flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-colors ${
