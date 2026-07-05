@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useAppStore } from './store/useAppStore'
+import { useState, useEffect } from 'react'
+import { useAppStore, registerActivityListeners } from './store/useAppStore'
 import { useTheme } from './hooks/useTheme'
 import BottomNav from './components/BottomNav'
 import AuthScreen from './components/AuthScreen'
@@ -54,6 +54,10 @@ export default function App() {
   const users = useAppStore((state) => Object.keys(state.auth.users))
   const seedColor = useAppStore((state) => state.settings.seedColor)
   const isDark = useAppStore((state) => state.settings.isDark)
+
+  useEffect(() => {
+    registerActivityListeners()
+  }, [])
 
   useTheme(seedColor, isDark)
 

@@ -6,11 +6,14 @@ const PREFIX = 'pm-'
 
 export const zustandStorage = {
   getItem: async (name) => {
-    const value = await storageGet(name, null)
-    return value
+    if (IS_NATIVE) {
+      const result = await Preferences.get({ key: `${PREFIX}${name}` })
+      return result.value ?? null
+    }
+    return localStorage.getItem(`${PREFIX}${name}`)
   },
   setItem: async (name, value) => {
-    await storageSet(name, value)
+    await storageSet(name, JSON.parse(value))
   },
   removeItem: async (name) => {
     await storageRemove(name)

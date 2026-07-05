@@ -941,9 +941,10 @@ export function resetActivityTimer() {
   }, LOCK_TIMEOUT)
 }
 
-if (typeof window !== 'undefined' && !activityListenersRegistered) {
+export function registerActivityListeners() {
+  if (typeof window === 'undefined' || activityListenersRegistered) return
   activityListenersRegistered = true
-  ['click', 'touchstart', 'keydown', 'scroll'].forEach((event) => {
+  ;['click', 'touchstart', 'keydown', 'scroll'].forEach((event) => {
     window.addEventListener(event, resetActivityTimer, { passive: true })
   })
 }
