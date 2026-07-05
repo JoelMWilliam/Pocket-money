@@ -4,6 +4,19 @@ import { Capacitor } from '@capacitor/core'
 const IS_NATIVE = Capacitor.isNativePlatform()
 const PREFIX = 'pm-'
 
+export const zustandStorage = {
+  getItem: async (name) => {
+    const value = await storageGet(name, null)
+    return value
+  },
+  setItem: async (name, value) => {
+    await storageSet(name, value)
+  },
+  removeItem: async (name) => {
+    await storageRemove(name)
+  }
+}
+
 export async function storageSet(key, value) {
   const serialized = JSON.stringify(value)
   if (IS_NATIVE) {

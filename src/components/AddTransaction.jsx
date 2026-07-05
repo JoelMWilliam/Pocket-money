@@ -213,9 +213,9 @@ export default function AddTransaction({ editing, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-md animate-slide-up rounded-t-3xl bg-black border-t border-outline-variant">
+      <div className="flex w-full max-w-md max-h-[92vh] flex-col animate-slide-up rounded-t-3xl bg-black border-t border-outline-variant">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
+        <div className="flex-none flex items-center justify-between border-b border-outline-variant px-5 py-4">
           <h2 className="text-lg font-bold text-on-surface">{editing ? 'Edit' : 'Add'} Transaction</h2>
           <div className="flex items-center gap-1">
             {editing && (
@@ -233,58 +233,59 @@ export default function AddTransaction({ editing, onClose }) {
           </div>
         </div>
 
-        {/* Type selector */}
-        <div className="grid grid-cols-3 gap-2 p-4">
-          {TYPES.map((t) => {
-            const Icon = t.icon
-            const active = type === t.id
-            return (
-              <button
-                key={t.id}
-                onClick={() => setType(t.id)}
-                className={`flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition-colors ${
-                  active
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface text-on-surface-variant'
-                }`}
-              >
-                <Icon size={16} /> {t.label}
-              </button>
-            )
-          })}
-        </div>
-
-        {step === 1 && (
-          <div className="px-5 pb-6">
-            <div className="mb-6 text-center">
-              <p className="text-sm text-on-surface-variant">Amount</p>
-              <p className="mt-2 text-5xl font-bold text-on-surface">LKR {amount || '0.00'}</p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              {numpadKeys.map((key) => (
+        <div className="overflow-y-auto">
+          {/* Type selector */}
+          <div className="grid grid-cols-3 gap-2 p-4">
+            {TYPES.map((t) => {
+              const Icon = t.icon
+              const active = type === t.id
+              return (
                 <button
-                  key={key}
-                  onClick={() => handleNumpad(key)}
-                  className="rounded-2xl bg-surface py-4 text-xl font-medium text-on-surface active:bg-surface-bright"
+                  key={t.id}
+                  onClick={() => setType(t.id)}
+                  className={`flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? 'bg-primary text-on-primary'
+                      : 'bg-surface text-on-surface-variant'
+                  }`}
                 >
-                  {key === 'back' ? '⌫' : key}
+                  <Icon size={16} /> {t.label}
                 </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setStep(2)}
-              disabled={!Number(amount)}
-              className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-base font-semibold text-on-primary disabled:opacity-40"
-            >
-              Continue
-            </button>
+              )
+            })}
           </div>
-        )}
 
-        {step === 2 && (
-          <div className="h-[60vh] overflow-y-auto px-5 pb-24">
+          {step === 1 && (
+            <div className="px-5 pb-6">
+              <div className="mb-6 text-center">
+                <p className="text-sm text-on-surface-variant">Amount</p>
+                <p className="mt-2 text-5xl font-bold text-on-surface">LKR {amount || '0.00'}</p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {numpadKeys.map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => handleNumpad(key)}
+                    className="rounded-2xl bg-surface py-4 text-xl font-medium text-on-surface active:bg-surface-bright"
+                  >
+                    {key === 'back' ? '⌫' : key}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setStep(2)}
+                disabled={!Number(amount)}
+                className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-base font-semibold text-on-primary disabled:opacity-40"
+              >
+                Continue
+              </button>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="px-5 pb-24">
             <div className="mb-4">
               <label className="mb-2 block text-xs font-medium text-on-surface-variant">Account</label>
               <div className="grid grid-cols-2 gap-2">
@@ -540,6 +541,7 @@ export default function AddTransaction({ editing, onClose }) {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   )

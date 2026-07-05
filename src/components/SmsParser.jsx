@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { X, MessageSquare, Bell, Plus, Check } from 'lucide-react'
+import { registerPlugin } from '@capacitor/core'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR } from '../lib/utils'
 import { readNativeSms } from '../lib/biometric'
+
+const SmsReader = registerPlugin('SmsReader')
 
 const BANK_PATTERNS = [
   {
@@ -60,6 +63,19 @@ export default function SmsParser({ onClose }) {
 
   useEffect(() => {
     async function load() {
+      try {
+        const perm = await SmsReader.checkPermission()
+        if (!perm.granted) {
+          const req = await SmsReader.requestPermission()
+          if (!req.granted) {
+            setPermission('denied')
+            return
+          }
+        }
+      } catch (err) {
+        console.error(err)
+      }
+
       try {
         const native = await readNativeSms()
         if (native.length > 0) {
@@ -133,64 +149,79 @@ export default function SmsParser({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-md animate-slide-up rounded-t-3xl bg-black p-5 border-t border-outline-variant">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MessageSquare size={20} className="text-primary" />
-            <h2 className="text-lg font-bold text-on-surface">SMS Import</h2>
+      <div className="flex w-full max-w-md max-h-[85vh] flex-col animate-slide-up rounded-t-3xl bg-black border-t border-outline-variant">
+        <div className="flex-none p-5 pb-2">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare size={20} className="text-primary" />
+              <h2 className="text-lg font-bold text-on-surface">SMS Import</h2>
+            </div>
+            <button onClick={onClose} className="rounded-full p-2 text-on-surface-variant hover:bg-surface">
+              <X size={20} />
+            </button>
           </div>
-          <button onClick={onClose} className="rounded-full p-2 text-on-surface-variant hover:bg-surface">
-            <X size={20} />
-          </button>
+          <div className="mx-auto mb-1 h-1 w-12 rounded-full bg-outline-variant" />
         </div>
 
-        {permission === 'manual' && (
-          <div className="mb-4">
-            <p className="mb-2 text-xs text-on-surface-variant">Paste a bank SMS below to parse:</p>
-            <textarea
-              rows={3}
-              onChange={handleManualPaste}
-              className="w-full rounded-xl border border-outline-variant bg-surface p-3 text-sm text-on-surface"
-              placeholder="e.g. Your account has been debited LKR 1,500.00 at Cargills Food City"
-            />
-          </div>
-        )}
+        <div className="overflow-y-auto p-5 pt-2">
+          {permission === 'manual' && (
+            <div className="mb-4">
+              <p className="mb-2 text-xs text-on-surface-variant">Paste a bank SMS below to parse:</p>
+              <textarea
+                rows={3}
+                onChange={handleManualPaste}
+                className="w-full rounded-xl border border-outline-variant bg-surface p-3 text-sm text-on-surface"
+                placeholder="e.g. Your account has been debited LKR 1,500.00 at Cargills Food City"
+              />
+            </div>
+          )}
 
-        {messages.length === 0 ? (
-          <div className="py-8 text-center">
-            <Bell size={40} className="mx-auto mb-3 text-on-surface-variant" />
-            <p className="text-sm text-on-surface-variant">No bank messages found.</p>
-            <p className="mt-1 text-xs text-on-surface-variant">On Android, grant SMS permission to auto-import.</p>
-          </div>
-        ) : (
-          <div className="mb-4 max-h-[50vh] space-y-2 overflow-y-auto">
-            {messages.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => toggleSelect(m.id)}
-                className={`flex w-full items-center justify-between rounded-xl border p-3 text-left ${
-                  selected.includes(m.id) ? 'border-primary bg-primary-container' : 'border-outline-variant bg-surface'
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-on-surface">{m.parsed.note}</p>
-                  <p className="text-xs text-on-surface-variant">{formatLKR(m.parsed.amount)} · {m.parsed.type}</p>
-                </div>
-                {selected.includes(m.id) ? <Check size={18} className="text-primary" /> : <Plus size={18} className="text-on-surface-variant" />}
-              </button>
-            ))}
-          </div>
-        )}
+          {permission === 'denied' && (
+            <div className="mb-4 rounded-2xl bg-error/10 p-4 text-sm text-error">
+              <p className="font-medium">SMS permission denied</p>
+              <p className="mt-1 text-xs opacity-90">
+                Go to Android Settings → Apps → Pocket Money → Permissions → SMS → Allow.
+                On some phones you may also need to set Pocket Money as the default SMS app temporarily.
+              </p>
+            </div>
+          )}
 
-        {selected.length > 0 && (
-          <button
-            onClick={handleImport}
-            disabled={importing}
-            className="w-full rounded-2xl bg-primary py-3.5 text-base font-semibold text-on-primary disabled:opacity-50"
-          >
-            {importing ? 'Importing...' : `Import ${selected.length} Transactions`}
-          </button>
-        )}
+          {messages.length === 0 ? (
+            <div className="py-8 text-center">
+              <Bell size={40} className="mx-auto mb-3 text-on-surface-variant" />
+              <p className="text-sm text-on-surface-variant">No bank messages found.</p>
+              <p className="mt-1 text-xs text-on-surface-variant">On Android, grant SMS permission to auto-import.</p>
+            </div>
+          ) : (
+            <div className="mb-4 space-y-2">
+              {messages.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => toggleSelect(m.id)}
+                  className={`flex w-full items-center justify-between rounded-xl border p-3 text-left ${
+                    selected.includes(m.id) ? 'border-primary bg-primary-container' : 'border-outline-variant bg-surface'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-on-surface">{m.parsed.note}</p>
+                    <p className="text-xs text-on-surface-variant">{formatLKR(m.parsed.amount)} · {m.parsed.type}</p>
+                  </div>
+                  {selected.includes(m.id) ? <Check size={18} className="text-primary" /> : <Plus size={18} className="text-on-surface-variant" />}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {selected.length > 0 && (
+            <button
+              onClick={handleImport}
+              disabled={importing}
+              className="w-full rounded-2xl bg-primary py-3.5 text-base font-semibold text-on-primary disabled:opacity-50"
+            >
+              {importing ? 'Importing...' : `Import ${selected.length} Transactions`}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

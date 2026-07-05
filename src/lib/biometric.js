@@ -5,11 +5,20 @@ const SmsReader = registerPlugin('SmsReader')
 
 let supported = null
 
-export function canUseBiometrics() {
+export async function canUseBiometrics() {
   if (supported !== null) return supported
   if (typeof window === 'undefined') {
     supported = false
     return false
+  }
+  try {
+    const native = await checkNativeBiometric()
+    if (native) {
+      supported = true
+      return true
+    }
+  } catch (err) {
+    // ignore
   }
   if (window.PublicKeyCredential) {
     supported = true

@@ -1,8 +1,5 @@
 import { useMemo, useState } from 'react'
 import {
-  PieChart,
-  Pie,
-  Cell,
   ResponsiveContainer,
   Tooltip,
   BarChart,
@@ -151,60 +148,43 @@ export default function Analytics() {
       {categoryData.length > 0 && (
         <section className="mb-5 rounded-2xl bg-surface p-4 border border-outline-variant">
           <h2 className="mb-3 text-base font-semibold text-on-surface">Spending by Category</h2>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={50}
-                  outerRadius={70}
-                  paddingAngle={2}
-                  stroke="none"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #38383a',
-                    borderRadius: '12px',
-                    color: '#e3e3e3'
-                  }}
-                  formatter={(value) => formatLKR(value)}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-2 grid grid-cols-1 gap-2">
-            {categoryData.slice(0, 5).map((item) => (
-              <div key={item.name} className="flex items-center justify-between rounded-xl bg-black p-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="truncate text-sm text-on-surface">{item.name}</span>
+          <div className="space-y-3">
+            {categoryData.slice(0, 6).map((item) => {
+              const percent = monthlyTotals.expense > 0 ? (item.value / monthlyTotals.expense) * 100 : 0
+              return (
+                <div key={item.name}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="truncate text-on-surface">{item.name}</span>
+                    </div>
+                    <span className="shrink-0 font-medium text-on-surface">{formatLKR(item.value)}</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-black">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: item.color }}
+                    />
+                  </div>
                 </div>
-                <span className="shrink-0 text-sm font-medium text-on-surface">{formatLKR(item.value)}</span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
       )}
 
       <section className="mb-5 rounded-2xl bg-surface p-4 border border-outline-variant">
         <h2 className="mb-3 text-base font-semibold text-on-surface">Category Trends</h2>
-        <div className="h-52">
+        <div className="h-44">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={categoryTrends.data} margin={{ top: 5, right: 16, bottom: 0, left: -16 }}>
+            <LineChart data={categoryTrends.data} margin={{ top: 5, right: 0, bottom: 0, left: -24 }}>
               <XAxis dataKey="month" stroke="#8e8e93" fontSize={10} tickLine={false} axisLine={false} />
               <YAxis
                 stroke="#8e8e93"
                 fontSize={10}
                 tickLine={false}
                 axisLine={false}
-                width={48}
+                width={40}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip
@@ -259,16 +239,16 @@ export default function Analytics() {
 
       <section className="mb-24 rounded-2xl bg-surface p-4 border border-outline-variant">
         <h2 className="mb-3 text-base font-semibold text-on-surface">6 Month Trend</h2>
-        <div className="h-52">
+        <div className="h-44">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={last6Months} margin={{ top: 5, right: 8, bottom: 0, left: -16 }}>
+            <BarChart data={last6Months} margin={{ top: 5, right: 0, bottom: 0, left: -24 }}>
               <XAxis dataKey="month" stroke="#8e8e93" fontSize={10} tickLine={false} axisLine={false} />
               <YAxis
                 stroke="#8e8e93"
                 fontSize={10}
                 tickLine={false}
                 axisLine={false}
-                width={48}
+                width={40}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip

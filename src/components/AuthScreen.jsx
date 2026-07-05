@@ -8,7 +8,7 @@ export default function AuthScreen() {
   const [username, setUsername] = useState('')
   const [pin, setPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
-  const [useDemo, setUseDemo] = useState(true)
+  const [useDemo, setUseDemo] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 

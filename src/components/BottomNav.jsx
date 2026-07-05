@@ -39,19 +39,19 @@ export default function BottomNav({ current, onChange }) {
                     onChange(item.id)
                   }
                 }}
-                className={`flex flex-col items-center justify-center py-3 px-3 transition-colors ${
+                className={`flex flex-col items-center justify-center py-2 px-3 transition-colors ${
                   active ? 'text-primary' : 'text-on-surface-variant'
                 }`}
                 aria-label={item.label}
               >
                 <div
-                  className={`rounded-2xl p-2 transition-all ${
+                  className={`rounded-xl p-1.5 transition-all ${
                     active ? 'bg-primary-container' : ''
                   }`}
                 >
-                  <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+                  <Icon size={20} strokeWidth={active ? 2.5 : 2} />
                 </div>
-                <span className={`mt-1 text-[10px] font-medium ${active ? 'text-primary' : ''}`}>
+                <span className={`mt-0.5 text-[10px] font-medium ${active ? 'text-primary' : ''}`}>
                   {item.label}
                 </span>
               </button>

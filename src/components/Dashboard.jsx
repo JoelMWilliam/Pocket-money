@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, Wallet, ArrowRight, PiggyBank, Lightbulb } fr
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, getCurrentMonth } from '../lib/utils'
 import TransactionItem from './TransactionItem'
+import UserSwitcher from './UserSwitcher'
 
 export default function Dashboard({ setScreen }) {
   const { auth, accounts, transactions, goals, budgets, categories, getMonthlyTotals, getTotalBalance } =
@@ -62,12 +63,15 @@ export default function Dashboard({ setScreen }) {
           <p className="text-sm text-on-surface-variant">{greeting}</p>
           <h1 className="text-2xl font-bold text-on-surface">Pocket Money</h1>
         </div>
-        <button
-          onClick={() => setScreen('settings')}
-          className="rounded-full bg-surface p-2 text-on-surface-variant"
-        >
-          <Wallet size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <UserSwitcher />
+          <button
+            onClick={() => setScreen('settings')}
+            className="rounded-full bg-surface p-2 text-on-surface-variant"
+          >
+            <Wallet size={20} />
+          </button>
+        </div>
       </header>
 
       {/* Net Worth Card */}

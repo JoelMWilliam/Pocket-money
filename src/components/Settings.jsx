@@ -749,20 +749,23 @@ export default function Settings() {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleChangePin}
-            className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant"
+            className="flex w-full max-w-md max-h-[90vh] flex-col animate-slide-up rounded-t-3xl bg-surface border-t border-outline-variant"
           >
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-on-surface">Change PIN</h2>
-              <button
-                type="button"
-                onClick={() => setShowPin(false)}
-                className="rounded-full p-2 text-on-surface-variant"
-              >
-                <X size={20} />
-              </button>
+            <div className="flex-none p-6 pb-2">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-on-surface">Change PIN</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowPin(false)}
+                  className="rounded-full p-2 text-on-surface-variant"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="mx-auto mb-1 h-1 w-12 rounded-full bg-outline-variant" />
             </div>
 
-            <div className="space-y-4">
+            <div className="overflow-y-auto p-6 pt-2 space-y-4">
               <input
                 type="password"
                 inputMode="numeric"
@@ -793,16 +796,16 @@ export default function Settings() {
                 placeholder="Confirm new PIN"
                 className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-center text-xl tracking-widest text-on-surface"
               />
+
+              {pinError && <p className="text-center text-sm text-error">{pinError}</p>}
+
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-primary py-3 text-sm font-semibold text-on-primary"
+              >
+                Update PIN
+              </button>
             </div>
-
-            {pinError && <p className="mt-3 text-center text-sm text-error">{pinError}</p>}
-
-            <button
-              type="submit"
-              className="mt-6 w-full rounded-2xl bg-primary py-3 text-sm font-semibold text-on-primary"
-            >
-              Update PIN
-            </button>
           </form>
         </div>
       )}

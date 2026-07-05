@@ -18,7 +18,7 @@ import { generateId, getCurrentMonth } from '../lib/utils'
 import { sanitizeText, sanitizeTags } from '../lib/sanitize'
 import { deleteTransactionReceipts, inlineReceipts, extractReceipts, migrateReceiptsToIndexedDB } from '../lib/receipts'
 import { canUseBiometrics, registerBiometric, verifyBiometric } from '../lib/biometric'
-import { storageGet, storageSet } from '../lib/storage'
+import { storageGet, zustandStorage } from '../lib/storage'
 
 const LOCK_TIMEOUT = 5 * 60 * 1000 // 5 minutes
 
@@ -813,6 +813,7 @@ export const useAppStore = create(
     }),
     {
       name: 'pocket-money-storage',
+      storage: zustandStorage,
       partialize: (state) => {
         const { auth, usersData } = state
         return { auth, usersData }

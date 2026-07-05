@@ -19,42 +19,47 @@ const MORE_ITEMS = [
 export default function MoreMenu({ current, onChange, onClose, onAction }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-on-surface">More</h2>
-          <button onClick={onClose} className="rounded-full p-2 text-on-surface-variant">
-            <X size={20} />
-          </button>
+      <div className="flex w-full max-w-md max-h-[80vh] flex-col animate-slide-up rounded-t-3xl bg-surface border-t border-outline-variant">
+        <div className="flex-none p-4 pb-2">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-on-surface">More</h2>
+            <button onClick={onClose} className="rounded-full p-2 text-on-surface-variant">
+              <X size={20} />
+            </button>
+          </div>
+          <div className="mx-auto mb-1 h-1 w-12 rounded-full bg-outline-variant" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {MORE_ITEMS.map((item) => {
-            const Icon = item.icon
-            const active = current === item.id
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.isAction) {
-                    onAction?.(item.id)
-                  } else {
-                    onChange(item.id)
-                  }
-                  onClose()
-                }}
-                className={`flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-colors ${
-                  active
-                    ? 'border-primary bg-primary-container'
-                    : 'border-outline-variant bg-black'
-                }`}
-              >
-                <Icon size={24} className={active ? 'text-primary' : 'text-on-surface-variant'} />
-                <div>
-                  <p className={`text-sm font-semibold ${active ? 'text-primary' : 'text-on-surface'}`}>{item.label}</p>
-                  <p className="text-[10px] text-on-surface-variant">{item.desc}</p>
-                </div>
-              </button>
-            )
-          })}
+        <div className="overflow-y-auto p-4 pt-2">
+          <div className="grid grid-cols-2 gap-3">
+            {MORE_ITEMS.map((item) => {
+              const Icon = item.icon
+              const active = current === item.id
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (item.isAction) {
+                      onAction?.(item.id)
+                    } else {
+                      onChange(item.id)
+                    }
+                    onClose()
+                  }}
+                  className={`flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-colors ${
+                    active
+                      ? 'border-primary bg-primary-container'
+                      : 'border-outline-variant bg-black'
+                  }`}
+                >
+                  <Icon size={22} className={active ? 'text-primary' : 'text-on-surface-variant'} />
+                  <div>
+                    <p className={`text-sm font-semibold ${active ? 'text-primary' : 'text-on-surface'}`}>{item.label}</p>
+                    <p className="text-[10px] text-on-surface-variant">{item.desc}</p>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>

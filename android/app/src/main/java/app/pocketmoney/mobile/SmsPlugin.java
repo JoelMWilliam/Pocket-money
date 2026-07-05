@@ -36,13 +36,29 @@ public class SmsPlugin extends Plugin {
         readMessages(call);
     }
 
+    @PluginMethod
+    public void checkPermission(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("granted", hasRequiredPermissions());
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void requestPermission(PluginCall call) {
+        if (hasRequiredPermissions()) {
+            JSObject ret = new JSObject();
+            ret.put("granted", true);
+            call.resolve(ret);
+            return;
+        }
+        requestPermissionForAlias("readSms", call, "readSmsPermissionCallback");
+    }
+
     @PermissionCallback
     private void readSmsPermissionCallback(PluginCall call) {
-        if (hasRequiredPermissions()) {
-            readMessages(call);
-        } else {
-            call.reject("SMS permission denied");
-        }
+        JSObject ret = new JSObject();
+        ret.put("granted", hasRequiredPermissions());
+        call.resolve(ret);
     }
 
     public boolean hasRequiredPermissions() {

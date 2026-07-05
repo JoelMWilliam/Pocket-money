@@ -73,8 +73,8 @@ export default function App() {
   const showQuickAdd = ['dashboard', 'accounts', 'transactions', 'budgets', 'goals', 'analytics', 'networth', 'debts', 'recurring', 'investments', 'loans', 'receipts'].includes(screen)
 
   return (
-    <div className="flex h-full flex-col bg-black">
-      <div className="flex-1 overflow-y-auto no-scrollbar safe-top safe-bottom pb-24">
+    <div className="flex h-[100dvh] flex-col bg-black">
+      <div className="scroll-container flex-1 no-scrollbar safe-top safe-bottom pb-24">
         <ScreenComponent setScreen={setScreen} />
       </div>
       {showQuickAdd && <QuickAddButton onClick={() => setQuickAddOpen(true)} />}

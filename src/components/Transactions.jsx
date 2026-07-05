@@ -242,20 +242,23 @@ export default function Transactions() {
           onClick={() => setShowFilters(false)}
         >
           <div
-            className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant"
+            className="flex w-full max-w-md max-h-[85vh] flex-col animate-slide-up rounded-t-3xl bg-surface border-t border-outline-variant"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-on-surface">Filters</h2>
-              <button
-                onClick={() => setShowFilters(false)}
-                className="rounded-full p-2 text-on-surface-variant"
-              >
-                <X size={20} />
-              </button>
+            <div className="flex-none p-6 pb-2">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-on-surface">Filters</h2>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="rounded-full p-2 text-on-surface-variant"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="mx-auto mb-1 h-1 w-12 rounded-full bg-outline-variant" />
             </div>
 
-            <div className="max-h-[60vh] space-y-4 overflow-y-auto">
+            <div className="overflow-y-auto p-6 pt-2 space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-medium text-on-surface-variant">Type</label>
                 <select
@@ -344,19 +347,21 @@ export default function Transactions() {
               </div>
             </div>
 
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={clearFilters}
-                className="flex-1 rounded-2xl border border-outline-variant py-3 text-sm font-semibold text-on-surface"
-              >
-                Clear
-              </button>
-              <button
-                onClick={() => setShowFilters(false)}
-                className="flex-1 rounded-2xl bg-primary py-3 text-sm font-semibold text-on-primary"
-              >
-                Show {filtered.length} results
-              </button>
+            <div className="flex-none p-6 pt-2">
+              <div className="flex gap-3">
+                <button
+                  onClick={clearFilters}
+                  className="flex-1 rounded-2xl border border-outline-variant py-3 text-sm font-semibold text-on-surface"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="flex-1 rounded-2xl bg-primary py-3 text-sm font-semibold text-on-primary"
+                >
+                  Show {filtered.length} results
+                </button>
+              </div>
             </div>
           </div>
         </div>
