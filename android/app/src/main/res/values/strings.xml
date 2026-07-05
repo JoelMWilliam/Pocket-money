@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Pocket Money</string>
+    <string name="title_activity_main">Pocket Money</string>
+    <string name="package_name">app.pocketmoney.mobile</string>
+    <string name="custom_url_scheme">app.pocketmoney.mobile</string>
+</resources>
