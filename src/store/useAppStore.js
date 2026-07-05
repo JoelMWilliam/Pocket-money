@@ -817,9 +817,13 @@ export const useAppStore = create(
         const { auth, usersData } = state
         return { auth, usersData }
       },
-      onRehydrateStorage: () => (state) => {
-        if (state?.auth?.currentUser && state.usersData[state.auth.currentUser]) {
-          const userData = state.usersData[state.auth.currentUser]
+      onRehydrateStorage: () => async (state) => {
+        if (state?.auth?.currentUser) {
+          const stored = await storageGet(`userdata-${state.auth.currentUser}`, null)
+          if (stored) {
+            state.usersData[state.auth.currentUser] = stored
+          }
+          const userData = state.usersData[state.auth.currentUser] || getEmptyUserData()
           Object.assign(state, userData)
           state.recalculateBalances?.()
           state.rolloverBudgets?.()
