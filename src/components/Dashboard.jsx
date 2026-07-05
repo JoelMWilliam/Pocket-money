@@ -198,14 +198,14 @@ export default function Dashboard({ setScreen }) {
                     </div>
                   </div>
                   <span className="text-sm font-semibold" style={{ color: goal.color }}>
-                    {Math.round((goal.current / goal.target) * 100)}%
+                    {goal.target > 0 ? Math.round((goal.current / goal.target) * 100) : 0}%
                   </span>
                 </div>
                 <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-black">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
-                      width: `${Math.min((goal.current / goal.target) * 100, 100)}%`,
+                      width: `${goal.target > 0 ? Math.min((goal.current / goal.target) * 100, 100) : 0}%`,
                       backgroundColor: goal.color
                     }}
                   />

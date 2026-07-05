@@ -29,7 +29,7 @@ export async function storageSet(key, value) {
 export async function storageGet(key, fallback = null) {
   if (IS_NATIVE) {
     const result = await Preferences.get({ key: `${PREFIX}${key}` })
-    if (!result.value) return fallback
+    if (result.value === null || result.value === undefined) return fallback
     try {
       return JSON.parse(result.value)
     } catch {

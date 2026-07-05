@@ -92,6 +92,13 @@ export default function AddTransaction({ editing, onClose }) {
     if (!value || value <= 0) return
     if (!accountId) return
     if (type === 'transfer' && !transferTo) return
+    if (type === 'expense' && splits.length > 0) {
+      const splitTotal = splits.reduce((s, x) => s + (Number(x.amount) || 0), 0)
+      if (Math.abs(splitTotal - value) > 0.01) {
+        alert('Split amounts must add up to the transaction total.')
+        return
+      }
+    }
 
     let finalReceipt = receipt
     if (editing?.receipt && editing.receipt !== receipt) {
@@ -128,10 +135,17 @@ export default function AddTransaction({ editing, onClose }) {
     if (!value || value <= 0) return
     if (!accountId) return
     if (type === 'transfer' && !transferTo) return
+    if (type === 'expense' && splits.length > 0) {
+      const splitTotal = splits.reduce((s, x) => s + (Number(x.amount) || 0), 0)
+      if (Math.abs(splitTotal - value) > 0.01) {
+        alert('Split amounts must add up to the transaction total.')
+        return
+      }
+    }
 
     let finalReceipt = receipt
-    if (receipt && editing?.receipt === receipt) {
-      // duplicate needs its own copy
+    if (receipt) {
+      // duplicate always needs its own receipt copy
       finalReceipt = await copyReceipt(receipt, generateId())
     }
 
@@ -257,10 +271,19 @@ export default function AddTransaction({ editing, onClose }) {
 
           {step === 1 && (
             <div className="px-5 pb-6">
-              <div className="mb-6 text-center">
-                <p className="text-sm text-on-surface-variant">Amount</p>
-                <p className="mt-2 text-5xl font-bold text-on-surface">LKR {amount || '0.00'}</p>
+            <div className="mb-6 text-center">
+              <p className="text-sm text-on-surface-variant">Amount</p>
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <p className="text-5xl font-bold text-on-surface">LKR {amount || '0.00'}</p>
+                <button
+                  type="button"
+                  onClick={() => setAmount('')}
+                  className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-on-surface-variant"
+                >
+                  Clear
+                </button>
               </div>
+            </div>
 
               <div className="grid grid-cols-3 gap-3">
                 {numpadKeys.map((key) => (

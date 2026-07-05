@@ -131,6 +131,12 @@ export default function SmsParser({ onClose }) {
     const defaultAccount = accounts[0]?.id
     const defaultCategory = categories.find((c) => c.type === 'expense')?.id
 
+    if (!defaultAccount || !defaultCategory) {
+      alert('Add at least one account and one expense category before importing.')
+      setImporting(false)
+      return
+    }
+
     for (const m of toImport) {
       addTransaction({
         accountId: defaultAccount,

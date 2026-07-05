@@ -14,7 +14,7 @@ export default function LockScreen() {
   const biometricEnabled = user?.biometricEnabled
 
   useEffect(() => {
-    setBioAvailable(canUseBiometrics())
+    canUseBiometrics().then(setBioAvailable)
   }, [])
 
   const handleSubmit = async (e) => {
@@ -64,7 +64,6 @@ export default function LockScreen() {
             value={pin}
             onChange={(e) => { setPin(e.target.value.replace(/\D/g, '').slice(0, 8)); setError('') }}
             placeholder="Enter PIN"
-            autoFocus
             className="w-full rounded-2xl border border-outline-variant bg-surface px-4 py-4 text-center text-3xl tracking-[0.3em] text-on-surface"
           />
 

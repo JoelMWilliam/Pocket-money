@@ -82,7 +82,7 @@ export default function Budgets() {
                     <p className="text-xs text-on-surface-variant">
                       {formatLKR(spent)} of {formatLKR(limit)}
                       {rolloverAmount > 0 && (
-                        <span className="ml-1 text-primary">(+{formatLKR(rolloverAmount)} rolled over)</span>
+                        <span className="ml-1 text-primary">(+{rolloverAmount.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} rolled over)</span>
                       )}
                     </p>
                   </div>

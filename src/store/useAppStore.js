@@ -15,26 +15,26 @@ import {
 } from '../lib/demoData'
 import { getCloudToken, setCloudToken, getCloudUser, setCloudUser, cloudSync } from '../lib/api'
 import { generateId, getCurrentMonth } from '../lib/utils'
-import { sanitizeText, sanitizeTags } from '../lib/sanitize'
+import { sanitizeText, sanitizeTags, sanitizeUsername } from '../lib/sanitize'
 import { deleteTransactionReceipts, inlineReceipts, extractReceipts, migrateReceiptsToIndexedDB } from '../lib/receipts'
 import { canUseBiometrics, registerBiometric, verifyBiometric } from '../lib/biometric'
-import { storageGet, zustandStorage } from '../lib/storage'
+import { storageGet, storageSet, storageRemove, zustandStorage } from '../lib/storage'
 
 const LOCK_TIMEOUT = 5 * 60 * 1000 // 5 minutes
 
-function mergeById(local = [], remote = [], timestampField = 'createdAt') {
+function mergeById(local = [], remote = [], timestampField = 'updatedAt') {
   const map = new Map()
   local.forEach((item) => map.set(item.id, item))
-  remote.forEach((item) => {
-    const existing = map.get(item.id)
-    if (!existing) {
-      map.set(item.id, item)
-    } else {
-      const existingTime = new Date(existing[timestampField] || 0).getTime()
-      const remoteTime = new Date(item[timestampField] || 0).getTime()
-      map.set(item.id, remoteTime >= existingTime ? item : existing)
-    }
-  })
+    remote.forEach((item) => {
+      const existing = map.get(item.id)
+      if (!existing) {
+        map.set(item.id, item)
+      } else {
+        const existingTime = new Date(existing[timestampField] || 0).getTime()
+        const remoteTime = new Date(item[timestampField] || 0).getTime()
+        map.set(item.id, remoteTime > existingTime ? item : existing)
+      }
+    })
   return Array.from(map.values())
 }
 
@@ -56,19 +56,20 @@ function getInitialUserData() {
 }
 
 function getEmptyUserData() {
+  const now = Date.now()
   return {
-    settings: { seedColor: '#0A84FF', isDark: true, currency: 'LKR', lastBudgetMonth: null },
+    settings: { seedColor: '#0A84FF', isDark: true, currency: 'LKR', lastBudgetMonth: null, updatedAt: now },
     accounts: [],
     categories: [
-      { id: 'cat-food', name: 'Food & Dining', icon: 'Utensils', color: '#FF9500', type: 'expense' },
-      { id: 'cat-transport', name: 'Transport', icon: 'Bus', color: '#0A84FF', type: 'expense' },
-      { id: 'cat-bills', name: 'Bills & Utilities', icon: 'Receipt', color: '#FF375F', type: 'expense' },
-      { id: 'cat-entertainment', name: 'Entertainment', icon: 'Film', color: '#BF5AF2', type: 'expense' },
-      { id: 'cat-shopping', name: 'Shopping', icon: 'ShoppingBag', color: '#FFCC00', type: 'expense' },
-      { id: 'cat-health', name: 'Health', icon: 'HeartPulse', color: '#30D158', type: 'expense' },
-      { id: 'cat-salary', name: 'Salary', icon: 'Banknote', color: '#30D158', type: 'income' },
-      { id: 'cat-gifts', name: 'Gifts', icon: 'Gift', color: '#64D2FF', type: 'income' },
-      { id: 'cat-transfer', name: 'Transfer', icon: 'ArrowLeftRight', color: '#8E8E93', type: 'transfer' }
+      { id: 'cat-food', name: 'Food & Dining', icon: 'Utensils', color: '#FF9500', type: 'expense', updatedAt: now },
+      { id: 'cat-transport', name: 'Transport', icon: 'Bus', color: '#0A84FF', type: 'expense', updatedAt: now },
+      { id: 'cat-bills', name: 'Bills & Utilities', icon: 'Receipt', color: '#FF375F', type: 'expense', updatedAt: now },
+      { id: 'cat-entertainment', name: 'Entertainment', icon: 'Film', color: '#BF5AF2', type: 'expense', updatedAt: now },
+      { id: 'cat-shopping', name: 'Shopping', icon: 'ShoppingBag', color: '#FFCC00', type: 'expense', updatedAt: now },
+      { id: 'cat-health', name: 'Health', icon: 'HeartPulse', color: '#30D158', type: 'expense', updatedAt: now },
+      { id: 'cat-salary', name: 'Salary', icon: 'Banknote', color: '#30D158', type: 'income', updatedAt: now },
+      { id: 'cat-gifts', name: 'Gifts', icon: 'Gift', color: '#64D2FF', type: 'income', updatedAt: now },
+      { id: 'cat-transfer', name: 'Transfer', icon: 'ArrowLeftRight', color: '#8E8E93', type: 'transfer', updatedAt: now }
     ],
     transactions: [],
     budgets: [],
@@ -107,9 +108,13 @@ export const useAppStore = create(
 
       // === Auth Actions ===
       createUser: async (username, pin, options = {}) => {
+        username = sanitizeUsername(username)
+        if (!username) throw new Error('Invalid username')
+        if (get().auth.users[username]) throw new Error('User already exists')
         const pinHash = await hashPin(pin)
         const userData = options.useDemo ? getInitialUserData() : getEmptyUserData()
-        await migrateReceiptsToIndexedDB(userData.transactions || [])
+        userData.transactions = userData.transactions ? [...userData.transactions] : []
+        await migrateReceiptsToIndexedDB(userData.transactions)
 
         set((state) => ({
           auth: {
@@ -122,6 +127,8 @@ export const useAppStore = create(
                 pinHash,
                 biometricEnabled: false,
                 encryptionEnabled: false,
+                failedPinAttempts: 0,
+                lockedUntil: null,
                 createdAt: Date.now()
               }
             }
@@ -141,18 +148,43 @@ export const useAppStore = create(
       login: async (username, pin) => {
         const user = get().auth.users[username]
         if (!user) throw new Error('User not found')
+        if (user.lockedUntil && Date.now() < user.lockedUntil) {
+          const seconds = Math.ceil((user.lockedUntil - Date.now()) / 1000)
+          throw new Error(`Too many attempts. Try again in ${seconds}s`)
+        }
         const valid = await verifyPin(pin, user.pinHash)
-        if (!valid) throw new Error('Invalid PIN')
+        if (!valid) {
+          const attempts = (user.failedPinAttempts || 0) + 1
+          const updates = { failedPinAttempts: attempts }
+          if (attempts >= 5) {
+            updates.lockedUntil = Date.now() + 30000
+          }
+          set((state) => ({
+            auth: {
+              ...state.auth,
+              users: {
+                ...state.auth.users,
+                [username]: { ...state.auth.users[username], ...updates }
+              }
+            }
+          }))
+          throw new Error('Invalid PIN')
+        }
 
         await get().loadUserData(username)
         const userData = get().usersData[username] || getEmptyUserData()
-        await migrateReceiptsToIndexedDB(userData.transactions || [])
+        userData.transactions = userData.transactions ? [...userData.transactions] : []
+        await migrateReceiptsToIndexedDB(userData.transactions)
         set((state) => ({
           auth: {
             ...state.auth,
             currentUser: username,
             isLocked: false,
-            lockAt: null
+            lockAt: null,
+            users: {
+              ...state.auth.users,
+              [username]: { ...state.auth.users[username], failedPinAttempts: 0, lockedUntil: null }
+            }
           },
           ...userData
         }))
@@ -180,11 +212,28 @@ export const useAppStore = create(
         const user = auth.users[auth.currentUser]
         if (!user) throw new Error('No active user')
 
+        if (user.lockedUntil && Date.now() < user.lockedUntil) {
+          const seconds = Math.ceil((user.lockedUntil - Date.now()) / 1000)
+          throw new Error(`Too many attempts. Try again in ${seconds}s`)
+        }
+
         if (options.biometric && user.biometricEnabled) {
           try {
             await verifyBiometric(user.biometricCredentialId)
             set((state) => ({
-              auth: { ...state.auth, isLocked: false, lockAt: null }
+              auth: {
+                ...state.auth,
+                users: {
+                  ...state.auth.users,
+                  [state.auth.currentUser]: {
+                    ...state.auth.users[state.auth.currentUser],
+                    failedPinAttempts: 0,
+                    lockedUntil: null
+                  }
+                },
+                isLocked: false,
+                lockAt: null
+              }
             }))
             return
           } catch (err) {
@@ -193,10 +242,41 @@ export const useAppStore = create(
         }
 
         const valid = await verifyPin(pin, user.pinHash)
-        if (!valid) throw new Error('Invalid PIN')
+        if (!valid) {
+          const attempts = (user.failedPinAttempts || 0) + 1
+          const updates = { failedPinAttempts: attempts }
+          if (attempts >= 5) {
+            updates.lockedUntil = Date.now() + 30000
+          }
+          set((state) => ({
+            auth: {
+              ...state.auth,
+              users: {
+                ...state.auth.users,
+                [state.auth.currentUser]: {
+                  ...state.auth.users[state.auth.currentUser],
+                  ...updates
+                }
+              }
+            }
+          }))
+          throw new Error('Invalid PIN')
+        }
 
         set((state) => ({
-          auth: { ...state.auth, isLocked: false, lockAt: null }
+          auth: {
+            ...state.auth,
+            users: {
+              ...state.auth.users,
+              [state.auth.currentUser]: {
+                ...state.auth.users[state.auth.currentUser],
+                failedPinAttempts: 0,
+                lockedUntil: null
+              }
+            },
+            isLocked: false,
+            lockAt: null
+          }
         }))
       },
 
@@ -225,7 +305,8 @@ export const useAppStore = create(
         get().saveCurrentUserData()
         await get().loadUserData(username)
         const userData = get().usersData[username] || getEmptyUserData()
-        await migrateReceiptsToIndexedDB(userData.transactions || [])
+        userData.transactions = userData.transactions ? [...userData.transactions] : []
+        await migrateReceiptsToIndexedDB(userData.transactions)
         set((state) => ({
           auth: { ...state.auth, currentUser: username, isLocked: true },
           ...userData
@@ -290,13 +371,15 @@ export const useAppStore = create(
         set((state) => {
           const { [username]: _, ...remainingUsers } = state.auth.users
           const { [username]: __, ...remainingData } = state.usersData
+          const isCurrent = state.auth.currentUser === username
           return {
             auth: {
               ...state.auth,
               users: remainingUsers,
-              currentUser: state.auth.currentUser === username ? null : state.auth.currentUser
+              currentUser: isCurrent ? null : state.auth.currentUser
             },
-            usersData: remainingData
+            usersData: remainingData,
+            ...(isCurrent ? getEmptyUserData() : {})
           }
         })
         storageRemove(`userdata-${username}`)
@@ -361,7 +444,7 @@ export const useAppStore = create(
               settings: { ...state.settings, ...cloud.settings },
               accounts: mergeById(state.accounts, cloud.accounts),
               categories: mergeById(state.categories, cloud.categories),
-              transactions: mergeById(state.transactions, cloud.transactions, 'createdAt'),
+              transactions: mergeById(state.transactions, cloud.transactions, 'updatedAt'),
               budgets: mergeById(state.budgets, cloud.budgets),
               goals: mergeById(state.goals, cloud.goals),
               debts: mergeById(state.debts, cloud.debts),
@@ -387,7 +470,7 @@ export const useAppStore = create(
 
       // === Settings ===
       updateSettings: (patch) => {
-        set((state) => ({ settings: { ...state.settings, ...patch } }))
+        set((state) => ({ settings: { ...state.settings, ...patch, updatedAt: Date.now() } }))
         get().persistUserData()
       },
 
@@ -398,7 +481,7 @@ export const useAppStore = create(
         set((state) => ({
           accounts: [
             ...state.accounts,
-            { ...clean, id: generateId(), initialBalance, balance: initialBalance }
+            { ...clean, id: generateId(), initialBalance, balance: initialBalance, updatedAt: Date.now() }
           ]
         }))
         get().recalculateBalances()
@@ -408,7 +491,7 @@ export const useAppStore = create(
         set((state) => ({
           accounts: state.accounts.map((a) => {
             if (a.id !== id) return a
-            const updated = { ...a, ...patch }
+            const updated = { ...a, ...patch, updatedAt: Date.now() }
             if (updated.name !== undefined) updated.name = sanitizeText(updated.name, 100)
             if (updated.initialBalance !== undefined && updated.balance === a.balance) {
               updated.balance = updated.initialBalance
@@ -431,14 +514,16 @@ export const useAppStore = create(
       // === Categories ===
       addCategory: (category) => {
         const clean = { ...category, name: sanitizeText(category.name, 100) }
-        set((state) => ({ categories: [...state.categories, { ...clean, id: generateId() }] }))
+        const id = clean.id || generateId()
+        set((state) => ({ categories: [...state.categories, { ...clean, id, updatedAt: Date.now() }] }))
         get().persistUserData()
+        return { ...clean, id }
       },
       updateCategory: (id, patch) => {
         set((state) => ({
           categories: state.categories.map((c) => {
             if (c.id !== id) return c
-            const updated = { ...c, ...patch }
+            const updated = { ...c, ...patch, updatedAt: Date.now() }
             if (updated.name !== undefined) updated.name = sanitizeText(updated.name, 100)
             return updated
           })
@@ -455,7 +540,7 @@ export const useAppStore = create(
 
       // === Transactions ===
       addTransaction: (transaction) => {
-        let newTx = { ...transaction, id: generateId(), createdAt: Date.now() }
+        let newTx = { ...transaction, id: generateId(), createdAt: Date.now(), updatedAt: Date.now() }
         newTx.note = sanitizeText(newTx.note, 500)
         newTx.tags = sanitizeTags(newTx.tags)
         newTx = get().applyRulesToTransaction(newTx)
@@ -473,7 +558,7 @@ export const useAppStore = create(
         set((state) => {
           const nextTransactions = state.transactions.map((t) => {
             if (t.id !== id) return t
-            const updated = { ...t, ...patch }
+            let updated = { ...t, ...patch, updatedAt: Date.now() }
             if (updated.note !== undefined) updated.note = sanitizeText(updated.note, 500)
             if (updated.tags !== undefined) updated.tags = sanitizeTags(updated.tags)
             if (updated.type !== 'transfer') {
@@ -482,6 +567,7 @@ export const useAppStore = create(
             if (updated.type !== 'expense') {
               updated.splits = undefined
             }
+            updated = get().applyRulesToTransaction(updated)
             return updated
           })
           return { transactions: nextTransactions }
@@ -510,8 +596,11 @@ export const useAppStore = create(
         get().persistUserData()
       },
       bulkUpdateTransactions: (ids, patch) => {
+        const cleanPatch = { ...patch }
+        if (cleanPatch.tags !== undefined) cleanPatch.tags = sanitizeTags(cleanPatch.tags)
+        if (cleanPatch.note !== undefined) cleanPatch.note = sanitizeText(cleanPatch.note, 500)
         set((state) => ({
-          transactions: state.transactions.map((t) => (ids.includes(t.id) ? { ...t, ...patch } : t))
+          transactions: state.transactions.map((t) => (ids.includes(t.id) ? { ...t, ...cleanPatch, updatedAt: Date.now() } : t))
         }))
         get().recalculateBalances()
         get().persistUserData()
@@ -522,14 +611,14 @@ export const useAppStore = create(
         set((state) => ({
           budgets: [
             ...state.budgets,
-            { ...budget, id: generateId(), rollover: budget.rollover ?? false, rolloverAmount: budget.rolloverAmount ?? 0 }
+            { ...budget, id: generateId(), rollover: budget.rollover ?? false, rolloverAmount: budget.rolloverAmount ?? 0, updatedAt: Date.now() }
           ]
         }))
         get().persistUserData()
       },
       updateBudget: (id, patch) => {
         set((state) => ({
-          budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...patch } : b))
+          budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...patch, updatedAt: Date.now() } : b))
         }))
         get().persistUserData()
       },
@@ -568,12 +657,12 @@ export const useAppStore = create(
 
       // === Goals ===
       addGoal: (goal) => {
-        set((state) => ({ goals: [...state.goals, { ...goal, id: generateId() }] }))
+        set((state) => ({ goals: [...state.goals, { ...goal, id: generateId(), updatedAt: Date.now() }] }))
         get().persistUserData()
       },
       updateGoal: (id, patch) => {
         set((state) => ({
-          goals: state.goals.map((g) => (g.id === id ? { ...g, ...patch } : g))
+          goals: state.goals.map((g) => (g.id === id ? { ...g, ...patch, updatedAt: Date.now() } : g))
         }))
         get().persistUserData()
       },
@@ -584,12 +673,12 @@ export const useAppStore = create(
 
       // === Debts ===
       addDebt: (debt) => {
-        set((state) => ({ debts: [...state.debts, { ...debt, id: generateId() }] }))
+        set((state) => ({ debts: [...state.debts, { ...debt, id: generateId(), updatedAt: Date.now() }] }))
         get().persistUserData()
       },
       updateDebt: (id, patch) => {
         set((state) => ({
-          debts: state.debts.map((d) => (d.id === id ? { ...d, ...patch } : d))
+          debts: state.debts.map((d) => (d.id === id ? { ...d, ...patch, updatedAt: Date.now() } : d))
         }))
         get().persistUserData()
       },
@@ -600,12 +689,12 @@ export const useAppStore = create(
 
       // === Recurring ===
       addRecurring: (recurring) => {
-        set((state) => ({ recurring: [...state.recurring, { ...recurring, id: generateId() }] }))
+        set((state) => ({ recurring: [...state.recurring, { ...recurring, id: generateId(), updatedAt: Date.now() }] }))
         get().persistUserData()
       },
       updateRecurring: (id, patch) => {
         set((state) => ({
-          recurring: state.recurring.map((r) => (r.id === id ? { ...r, ...patch } : r))
+          recurring: state.recurring.map((r) => (r.id === id ? { ...r, ...patch, updatedAt: Date.now() } : r))
         }))
         get().persistUserData()
       },
@@ -654,12 +743,12 @@ export const useAppStore = create(
 
       // === Investments ===
       addInvestment: (investment) => {
-        set((state) => ({ investments: [...state.investments, { ...investment, id: generateId() }] }))
+        set((state) => ({ investments: [...state.investments, { ...investment, id: generateId(), updatedAt: Date.now() }] }))
         get().persistUserData()
       },
       updateInvestment: (id, patch) => {
         set((state) => ({
-          investments: state.investments.map((i) => (i.id === id ? { ...i, ...patch } : i))
+          investments: state.investments.map((i) => (i.id === id ? { ...i, ...patch, updatedAt: Date.now() } : i))
         }))
         get().persistUserData()
       },
@@ -670,12 +759,12 @@ export const useAppStore = create(
 
       // === Loans ===
       addLoan: (loan) => {
-        set((state) => ({ loans: [...state.loans, { ...loan, id: generateId() }] }))
+        set((state) => ({ loans: [...state.loans, { ...loan, id: generateId(), updatedAt: Date.now() }] }))
         get().persistUserData()
       },
       updateLoan: (id, patch) => {
         set((state) => ({
-          loans: state.loans.map((l) => (l.id === id ? { ...l, ...patch } : l))
+          loans: state.loans.map((l) => (l.id === id ? { ...l, ...patch, updatedAt: Date.now() } : l))
         }))
         get().persistUserData()
       },
@@ -686,12 +775,12 @@ export const useAppStore = create(
 
       // === Templates ===
       addTemplate: (template) => {
-        set((state) => ({ templates: [...state.templates, { ...template, id: generateId() }] }))
+        set((state) => ({ templates: [...state.templates, { ...template, id: generateId(), updatedAt: Date.now() }] }))
         get().persistUserData()
       },
       updateTemplate: (id, patch) => {
         set((state) => ({
-          templates: state.templates.map((t) => (t.id === id ? { ...t, ...patch } : t))
+          templates: state.templates.map((t) => (t.id === id ? { ...t, ...patch, updatedAt: Date.now() } : t))
         }))
         get().persistUserData()
       },
@@ -702,12 +791,12 @@ export const useAppStore = create(
 
       // === Rules ===
       addRule: (rule) => {
-        set((state) => ({ rules: [...state.rules, { ...rule, id: generateId() }] }))
+        set((state) => ({ rules: [...state.rules, { ...rule, id: generateId(), updatedAt: Date.now() }] }))
         get().persistUserData()
       },
       updateRule: (id, patch) => {
         set((state) => ({
-          rules: state.rules.map((r) => (r.id === id ? { ...r, ...patch } : r))
+          rules: state.rules.map((r) => (r.id === id ? { ...r, ...patch, updatedAt: Date.now() } : r))
         }))
         get().persistUserData()
       },
@@ -716,7 +805,7 @@ export const useAppStore = create(
         get().persistUserData()
       },
       applyRulesToTransaction: (transaction) => {
-        const { rules, categories } = get()
+        const { rules, categories, accounts } = get()
         let updated = { ...transaction }
         for (const rule of rules) {
           if (!rule.active) continue
@@ -729,8 +818,12 @@ export const useAppStore = create(
             (rule.field === 'amount' && Number(updated.amount) === Number(pattern)) ||
             (rule.field === 'any' && (note.includes(pattern) || merchant.includes(pattern)))
           if (matches) {
-            if (rule.actionCategoryId) updated.categoryId = rule.actionCategoryId
-            if (rule.actionAccountId) updated.accountId = rule.actionAccountId
+            if (rule.actionCategoryId && categories.find((c) => c.id === rule.actionCategoryId)) {
+              updated.categoryId = rule.actionCategoryId
+            }
+            if (rule.actionAccountId && accounts.find((a) => a.id === rule.actionAccountId)) {
+              updated.accountId = rule.actionAccountId
+            }
             if (rule.actionTags?.length) {
               updated.tags = [...new Set([...(updated.tags || []), ...rule.actionTags])]
             }
@@ -838,6 +931,7 @@ export const useAppStore = create(
 
 // Auto-lock on inactivity
 let activityTimer
+let activityListenersRegistered = false
 export function resetActivityTimer() {
   const store = useAppStore.getState()
   if (!store.auth.currentUser) return
@@ -847,7 +941,8 @@ export function resetActivityTimer() {
   }, LOCK_TIMEOUT)
 }
 
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && !activityListenersRegistered) {
+  activityListenersRegistered = true
   ['click', 'touchstart', 'keydown', 'scroll'].forEach((event) => {
     window.addEventListener(event, resetActivityTimer, { passive: true })
   })

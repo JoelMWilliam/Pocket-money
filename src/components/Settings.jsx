@@ -30,6 +30,7 @@ import {
   readJSONFile,
   exportEncryptedBackup,
   readEncryptedBackupFile,
+  printReport
 } from '../lib/export'
 import { extractReceipts, inlineReceipts } from '../lib/receipts'
 import { shareFile } from '../lib/share'
@@ -77,7 +78,7 @@ export default function Settings() {
   const [bioEnabling, setBioEnabling] = useState(false)
 
   useEffect(() => {
-    setBioAvailable(canUseBiometrics())
+    canUseBiometrics().then(setBioAvailable)
   }, [])
 
   const handleEnableBiometric = async () => {
@@ -132,12 +133,16 @@ export default function Settings() {
     e.preventDefault()
     setEncError('')
     if (passphrase.length < 6) return setEncError('Passphrase must be at least 6 characters')
-    await exportEncryptedBackup(
-      { settings, accounts, categories, transactions, budgets, goals, debts, recurring, investments, loans },
-      passphrase
-    )
-    setShowEncExport(false)
-    setPassphrase('')
+    try {
+      await exportEncryptedBackup(
+        { settings, accounts, categories, transactions, budgets, goals, debts, recurring, investments, loans },
+        passphrase
+      )
+      setShowEncExport(false)
+      setPassphrase('')
+    } catch (err) {
+      setEncError('Export failed. Please try again.')
+    }
   }
 
   const handleEncryptedImport = async (e) => {
@@ -191,7 +196,7 @@ export default function Settings() {
         }
         if (t.transferTo === a.id) return sum + t.amount
         return sum
-      }, 0)
+      }, a.initialBalance || 0)
       if (Math.abs((a.balance || 0) - calculated) > 0.01) {
         issues.push(`Account "${a.name}" balance mismatch: stored ${a.balance}, calculated ${calculated}`)
       }
@@ -443,6 +448,27 @@ export default function Settings() {
 
       <section className="mb-5 rounded-2xl bg-surface p-2 border border-outline-variant">
         <button
+          onClick={() => { setCloudError(''); setSyncMsg(''); setShowCloud(true) }}
+          className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary-container p-2 text-primary">
+              <Cloud size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-on-surface">Cloud Sync</p>
+              <p className="text-xs text-on-surface-variant">{cloudUser ? `Connected as ${cloudUser}` : 'Back up and sync across devices'}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {cloudUser && <span className="h-2 w-2 rounded-full bg-primary" />}
+            <ChevronRight size={16} className="text-on-surface-variant" />
+          </div>
+        </button>
+
+        <div className="my-1 h-px bg-outline-variant" />
+
+        <button
           onClick={() => exportToJSON({ settings, accounts, categories, transactions, budgets, goals, debts, recurring, investments, loans })}
           className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
         >
@@ -609,7 +635,7 @@ export default function Settings() {
 
       <section className="mb-5 rounded-2xl bg-surface p-2 border border-outline-variant">
         <button
-          onClick={() => { checkDataHealth(); setHealth(null) }}
+          onClick={checkDataHealth}
           className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
         >
           <div className="flex items-center gap-3">

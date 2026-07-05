@@ -38,7 +38,7 @@ export async function checkNativeBiometric() {
 }
 
 export async function registerBiometric(username) {
-  if (!canUseBiometrics()) throw new Error('Biometric authentication not available')
+  if (!(await canUseBiometrics())) throw new Error('Biometric authentication not available')
 
   const nativeAvailable = await checkNativeBiometric()
   if (nativeAvailable) {
@@ -81,10 +81,10 @@ export async function registerBiometric(username) {
 }
 
 export async function verifyBiometric(credentialId) {
-  if (!canUseBiometrics()) throw new Error('Biometric authentication not available')
+  if (!(await canUseBiometrics())) throw new Error('Biometric authentication not available')
 
   const nativeAvailable = await checkNativeBiometric()
-  if (nativeAvailable || credentialId?.startsWith('native:')) {
+  if (nativeAvailable && credentialId?.startsWith('native:')) {
     const result = await BiometricAuth.authenticate({
       title: 'Unlock Pocket Money',
       subtitle: 'Use your biometric credential',

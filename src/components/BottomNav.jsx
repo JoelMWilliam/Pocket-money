@@ -14,7 +14,7 @@ const ITEMS = [
 export default function BottomNav({ current, onChange }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [smsOpen, setSmsOpen] = useState(false)
-  const isMoreOpen = ['analytics', 'advancedreports', 'debts', 'recurring', 'networth', 'investments', 'loans', 'receipts', 'templates', 'rules', 'import', 'settings', 'sms'].includes(current)
+  const isMoreOpen = ['analytics', 'advancedreports', 'debts', 'recurring', 'networth', 'investments', 'loans', 'receipts', 'templates', 'rules', 'import', 'settings'].includes(current)
 
   const handleMoreAction = (id) => {
     if (id === 'sms') {

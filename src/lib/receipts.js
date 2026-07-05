@@ -100,6 +100,9 @@ export async function extractReceipts(data) {
         console.error('Failed to extract receipt', t.id, err)
         delete t.receipt
       }
+    } else if (isIndexedDBReceipt(t.receipt)) {
+      // External indexeddb references from another device are unusable locally
+      delete t.receipt
     }
   }
   return cloned
