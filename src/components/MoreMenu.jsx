@@ -1,10 +1,11 @@
-import { BarChart3, TrendingDown, Calendar, Scale, Settings, X, LayoutTemplate, FileSpreadsheet, ShieldCheck, BarChart4, TrendingUp, ArrowRightLeft, Receipt, MessageSquare, Target } from 'lucide-react'
+import { BarChart3, TrendingDown, Calendar, Scale, Settings, X, LayoutTemplate, FileSpreadsheet, ShieldCheck, BarChart4, TrendingUp, ArrowRightLeft, Receipt, MessageSquare, Target, Wallet } from 'lucide-react'
 
 import { useRegisterModal } from '../contexts/ModalContext'
 
 const MORE_ITEMS = [
   { id: 'goals', label: 'Goals', icon: Target, desc: 'Savings goals' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, desc: 'Spending insights' },
+  { id: 'cashflow', label: 'Cash Flow', icon: Wallet, desc: 'Forecast view' },
   { id: 'advancedreports', label: 'Reports', icon: BarChart4, desc: 'Advanced reports' },
   { id: 'networth', label: 'Net Worth', icon: Scale, desc: 'Assets & liabilities' },
   { id: 'investments', label: 'Investments', icon: TrendingUp, desc: 'Stocks, EPF & more' },

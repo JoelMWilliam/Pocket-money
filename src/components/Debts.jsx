@@ -10,6 +10,40 @@ const STRATEGIES = [
   { id: 'custom', name: 'Custom', desc: 'Your own priority' }
 ]
 
+function calculatePayoff(remaining, totalMonthly, strategy) {
+  const projection = []
+  let month = 0
+  const maxMonths = 120
+  let interestPaid = 0
+
+  while (remaining.some((d) => d.currentBalance > 0) && month < maxMonths) {
+    month++
+    const ordered = [...remaining].sort((a, b) => {
+      if (strategy === 'avalanche') return b.interestRate - a.interestRate
+      if (strategy === 'snowball') return a.currentBalance - b.currentBalance
+      return 0
+    })
+
+    let available = totalMonthly
+    for (const debt of ordered) {
+      if (debt.currentBalance <= 0) continue
+      const interest = (debt.currentBalance * (debt.interestRate / 100)) / 12
+      interestPaid += interest
+      debt.currentBalance += interest
+      const payment = Math.min(available, Math.max(debt.minimumPayment, debt.currentBalance))
+      debt.currentBalance = Math.max(0, debt.currentBalance - payment)
+      available -= payment
+    }
+
+    projection.push({
+      month,
+      total: remaining.reduce((sum, d) => sum + d.currentBalance, 0)
+    })
+  }
+
+  return { months: month, projection, interestPaid }
+}
+
 export default function Debts() {
   const { debts, addDebt, updateDebt, deleteDebt } = useAppStore()
   const [showForm, setShowForm] = useState(false)
@@ -66,6 +100,7 @@ export default function Debts() {
   const totalDebt = debts.reduce((sum, d) => sum + d.balance, 0)
   const totalMinPayment = debts.reduce((sum, d) => sum + d.minimumPayment, 0)
   const extra = Number(extraPayment) || 0
+  const totalMonthly = totalMinPayment + extra
 
   const orderedDebts = useMemo(() => {
     const strategy = selectedStrategy
@@ -76,39 +111,18 @@ export default function Debts() {
     })
   }, [debts, selectedStrategy])
 
+  const baselineProjection = useMemo(() => {
+    return calculatePayoff(debts.map((d) => ({ ...d, currentBalance: d.balance })), totalMinPayment, 'avalanche')
+  }, [debts, totalMinPayment])
+
   const payoffProjection = useMemo(() => {
-    const projection = []
-    let remaining = debts.map((d) => ({ ...d, currentBalance: d.balance }))
-    let month = 0
-    const maxMonths = 120
-    const totalMonthly = totalMinPayment + extra
+    return calculatePayoff(debts.map((d) => ({ ...d, currentBalance: d.balance })), totalMonthly, selectedStrategy)
+  }, [debts, totalMonthly, selectedStrategy])
 
-    while (remaining.some((d) => d.currentBalance > 0) && month < maxMonths) {
-      month++
-      const ordered = [...remaining].sort((a, b) => {
-        if (selectedStrategy === 'avalanche') return b.interestRate - a.interestRate
-        if (selectedStrategy === 'snowball') return a.currentBalance - b.currentBalance
-        return 0
-      })
-
-      let available = totalMonthly
-      for (const debt of ordered) {
-        if (debt.currentBalance <= 0) continue
-        const interest = (debt.currentBalance * (debt.interestRate / 100)) / 12
-        debt.currentBalance += interest
-        const payment = Math.min(available, Math.max(debt.minimumPayment, debt.currentBalance))
-        debt.currentBalance = Math.max(0, debt.currentBalance - payment)
-        available -= payment
-      }
-
-      projection.push({
-        month,
-        total: remaining.reduce((sum, d) => sum + d.currentBalance, 0)
-      })
-    }
-
-    return { months: month, projection }
-  }, [debts, totalMinPayment, extra, selectedStrategy])
+  const interestSaved = useMemo(() => {
+    if (!baselineProjection.interestPaid || !payoffProjection.interestPaid) return 0
+    return Math.max(0, baselineProjection.interestPaid - payoffProjection.interestPaid)
+  }, [baselineProjection, payoffProjection])
 
   return (
     <div className="animate-fade-in px-4 pt-6">
@@ -196,6 +210,11 @@ export default function Debts() {
           <p className="mt-1 text-lg font-bold text-on-primary-container">
             Debt-free in {payoffProjection.months < 120 ? `${payoffProjection.months} months` : '10+ years'}
           </p>
+          {interestSaved > 0 && (
+            <p className="mt-1 text-xs text-green-400">
+              Save {formatLKR(interestSaved)} in interest vs. minimum payments
+            </p>
+          )}
         </div>
       </section>
 

@@ -20,7 +20,8 @@ import {
   ArrowUp,
   ArrowDown,
   HeartPulse,
-  Fingerprint
+  Fingerprint,
+  Bell
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { PRESET_COLORS } from '../lib/theme'
@@ -36,6 +37,7 @@ import { extractReceipts, inlineReceipts } from '../lib/receipts'
 import { shareFile } from '../lib/share'
 import { cloudAuth } from '../lib/api'
 import { canUseBiometrics } from '../lib/biometric'
+import { requestNotificationPermission, scheduleDailyReminder, cancelAllNotifications } from '../lib/notifications'
 import { RegisterModal } from './ModalRoot'
 
 export default function Settings() {
@@ -77,6 +79,7 @@ export default function Settings() {
   const [health, setHealth] = useState(null)
   const [bioAvailable, setBioAvailable] = useState(false)
   const [bioEnabling, setBioEnabling] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
 
   useEffect(() => {
     canUseBiometrics().then(setBioAvailable)
@@ -91,6 +94,22 @@ export default function Settings() {
       alert(err.message)
     } finally {
       setBioEnabling(false)
+    }
+  }
+
+  const toggleDailyReminder = async () => {
+    if (notificationsEnabled) {
+      await cancelAllNotifications()
+      setNotificationsEnabled(false)
+    } else {
+      const granted = await requestNotificationPermission()
+      if (granted) {
+        await scheduleDailyReminder(999999, 'Pocket Money', 'Log today\'s transactions before bed.', 20, 0)
+        setNotificationsEnabled(true)
+        alert('Daily reminder enabled at 8:00 PM.')
+      } else {
+        alert('Notification permission denied.')
+      }
     }
   }
 
@@ -406,6 +425,28 @@ export default function Settings() {
             <ChevronRight size={16} className="text-on-surface-variant" />
           </button>
         )}
+
+        <div className="my-1 h-px bg-outline-variant" />
+
+        <button
+          onClick={toggleDailyReminder}
+          className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary-container p-2 text-primary">
+              <Bell size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-on-surface">Daily Reminder</p>
+              <p className="text-xs text-on-surface-variant">
+                {notificationsEnabled ? 'Reminds you to log transactions at 8 PM' : 'Tap to enable'}
+              </p>
+            </div>
+          </div>
+          <div className={`relative h-7 w-12 rounded-full transition-colors ${notificationsEnabled ? 'bg-primary' : 'bg-surface-variant'}`}>
+            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${notificationsEnabled ? 'left-6' : 'left-1'}`} />
+          </div>
+        </button>
 
         <div className="my-1 h-px bg-outline-variant" />
 

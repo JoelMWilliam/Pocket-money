@@ -19,6 +19,7 @@ import { sanitizeText, sanitizeTags, sanitizeUsername } from '../lib/sanitize'
 import { deleteTransactionReceipts, inlineReceipts, extractReceipts, migrateReceiptsToIndexedDB } from '../lib/receipts'
 import { canUseBiometrics, registerBiometric, verifyBiometric } from '../lib/biometric'
 import { storageGet, storageSet, storageRemove, zustandStorage } from '../lib/storage'
+import { cancelNotifications, scheduleBillReminder, idHash } from '../lib/notifications'
 
 const LOCK_TIMEOUT = 5 * 60 * 1000 // 5 minutes
 
@@ -708,19 +709,29 @@ export const useAppStore = create(
       },
 
       // === Recurring ===
-      addRecurring: (recurring) => {
-        set((state) => ({ recurring: [...state.recurring, { ...recurring, id: generateId(), updatedAt: Date.now() }] }))
-        get().persistUserData()
+      addRecurring: async (recurring) => {
+        const item = { ...recurring, id: generateId(), updatedAt: Date.now() }
+        set((state) => ({ recurring: [...state.recurring, item] }))
+        await get().persistUserData()
+        if (recurring.type === 'expense' && recurring.reminderDays > 0) {
+          await scheduleBillReminder(item.id, `Bill due: ${recurring.name}`, `${formatLKR(recurring.amount)} due on ${recurring.nextDueDate}`, recurring.nextDueDate, recurring.reminderDays)
+        }
       },
-      updateRecurring: (id, patch) => {
+      updateRecurring: async (id, patch) => {
         set((state) => ({
           recurring: state.recurring.map((r) => (r.id === id ? { ...r, ...patch, updatedAt: Date.now() } : r))
         }))
-        get().persistUserData()
+        await get().persistUserData()
+        const updated = get().recurring.find((r) => r.id === id)
+        if (updated?.type === 'expense' && updated.active) {
+          await cancelNotifications([idHash(id)])
+          await scheduleBillReminder(updated.id, `Bill due: ${updated.name}`, `${formatLKR(updated.amount)} due on ${updated.nextDueDate}`, updated.nextDueDate, updated.reminderDays || 3)
+        }
       },
-      deleteRecurring: (id) => {
+      deleteRecurring: async (id) => {
         set((state) => ({ recurring: state.recurring.filter((r) => r.id !== id) }))
-        get().persistUserData()
+        await get().persistUserData()
+        await cancelNotifications([idHash(id)])
       },
 
       generateRecurringTransactions: (untilDate) => {

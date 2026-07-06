@@ -25,6 +25,7 @@ import Templates from './components/Templates'
 import Rules from './components/Rules'
 import ImportCSV from './components/ImportCSV'
 import AdvancedReports from './components/AdvancedReports'
+import CashFlow from './components/CashFlow'
 
 const SCREENS = {
   dashboard: Dashboard,
@@ -34,6 +35,7 @@ const SCREENS = {
   goals: Goals,
   analytics: Analytics,
   advancedreports: AdvancedReports,
+  cashflow: CashFlow,
   debts: Debts,
   recurring: Recurring,
   networth: NetWorth,
@@ -78,7 +80,7 @@ export default function App() {
   }
 
   const ScreenComponent = SCREENS[screen]
-  const showQuickAdd = ['dashboard', 'accounts', 'transactions', 'budgets', 'goals', 'analytics', 'networth', 'debts', 'recurring', 'investments', 'loans', 'receipts'].includes(screen)
+  const showQuickAdd = ['dashboard', 'accounts', 'transactions', 'budgets', 'goals', 'analytics', 'cashflow', 'networth', 'debts', 'recurring', 'investments', 'loans', 'receipts'].includes(screen)
 
   return (
     <div className="relative flex h-[100dvh] flex-col bg-black">
