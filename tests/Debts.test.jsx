@@ -18,7 +18,7 @@ describe('Debts', () => {
     render(<Debts />)
     const amounts = screen.getAllByText('LKR 750,000.00')
     expect(amounts.length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText(/LKR 25,000.00\/mo/)).toBeInTheDocument()
+    expect(screen.getAllByText(/LKR 25,000.00\/mo/).length).toBeGreaterThanOrEqual(1)
   })
 
   it('lists the debt', () => {

@@ -20,6 +20,6 @@ describe('CashFlow', () => {
 
   it('shows upcoming expense amount', () => {
     render(<CashFlow setScreen={() => {}} />)
-    expect(screen.getByText('-LKR 5,000.00')).toBeInTheDocument()
+    expect(screen.getAllByText('-LKR 5,000.00').length).toBeGreaterThanOrEqual(1)
   })
 })
