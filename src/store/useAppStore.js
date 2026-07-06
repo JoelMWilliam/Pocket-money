@@ -14,7 +14,7 @@ import {
   DEMO_SETTINGS
 } from '../lib/demoData'
 import { getCloudToken, setCloudToken, getCloudUser, setCloudUser, cloudSync } from '../lib/api'
-import { generateId, getCurrentMonth } from '../lib/utils'
+import { generateId, getCurrentMonth, formatLKR } from '../lib/utils'
 import { sanitizeText, sanitizeTags, sanitizeUsername } from '../lib/sanitize'
 import { deleteTransactionReceipts, inlineReceipts, extractReceipts, migrateReceiptsToIndexedDB } from '../lib/receipts'
 import { canUseBiometrics, registerBiometric, verifyBiometric } from '../lib/biometric'
