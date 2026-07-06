@@ -85,6 +85,7 @@ export default function Accounts() {
         </div>
         <button
           onClick={openNew}
+          aria-label="Add account"
           className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
         >
           <Plus size={22} />
@@ -125,10 +126,10 @@ export default function Accounts() {
       </section>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant"
+            className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 pb-24 border-t border-outline-variant"
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-on-surface">

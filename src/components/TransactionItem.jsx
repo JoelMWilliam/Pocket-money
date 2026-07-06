@@ -43,65 +43,66 @@ export default function TransactionItem({ transaction, onClick, onDelete }) {
 
   return (
     <div className="relative">
-      <button
-        onClick={onClick}
-        className="flex w-full items-center justify-between rounded-2xl bg-surface p-3 text-left transition-colors border border-outline-variant active:bg-surface-bright"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <div
-            className="rounded-xl p-2.5 shrink-0"
-            style={{
-              backgroundColor: isTransfer
-                ? 'var(--md-sys-color-surface-variant)'
-                : `${category?.color || '#8e8e93'}22`
-            }}
-          >
-            <Icon
-              size={20}
+      <div className="flex w-full items-stretch rounded-2xl bg-surface text-left border border-outline-variant active:bg-surface-bright">
+        <button
+          onClick={onClick}
+          className="flex flex-1 items-center justify-between rounded-l-2xl p-3 text-left transition-colors"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="rounded-xl p-2.5 shrink-0"
               style={{
-                color: isTransfer ? '#8e8e93' : category?.color || '#8e8e93'
+                backgroundColor: isTransfer
+                  ? 'var(--md-sys-color-surface-variant)'
+                  : `${category?.color || '#8e8e93'}22`
               }}
-            />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-on-surface">
-              {transaction.note || category?.name || 'Transaction'}
-            </p>
-            <p className="text-xs text-on-surface-variant">
-              {formatShortDate(transaction.date)} · {account?.name || 'Unknown'}
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              {transaction.receipt && (
-                <span className="inline-flex items-center gap-1 text-[10px] text-primary">
-                  <Receipt size={10} /> receipt
-                </span>
-              )}
-              {transaction.splits?.length > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px] text-primary">
-                  <Split size={10} /> split
-                </span>
-              )}
-              {transaction.tags?.map((tag) => (
-                <span key={tag} className="inline-flex items-center gap-1 text-[10px] text-on-surface-variant">
-                  <Tag size={10} /> {tag}
-                </span>
-              ))}
+            >
+              <Icon
+                size={20}
+                style={{
+                  color: isTransfer ? '#8e8e93' : category?.color || '#8e8e93'
+                }}
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-on-surface">
+                {transaction.note || category?.name || 'Transaction'}
+              </p>
+              <p className="text-xs text-on-surface-variant">
+                {formatShortDate(transaction.date)} · {account?.name || 'Unknown'}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {transaction.receipt && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-primary">
+                    <Receipt size={10} /> receipt
+                  </span>
+                )}
+                {transaction.splits?.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-primary">
+                    <Split size={10} /> split
+                  </span>
+                )}
+                {transaction.tags?.map((tag) => (
+                  <span key={tag} className="inline-flex items-center gap-1 text-[10px] text-on-surface-variant">
+                    <Tag size={10} /> {tag}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <p className={`text-sm font-semibold ${amountClass}`}>
+          <p className={`ml-2 shrink-0 text-sm font-semibold ${amountClass}`}>
             {isIncome ? '+' : isTransfer ? '⇄' : '-'} {formatLKR(transaction.amount)}
           </p>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
-            className="rounded-full p-1.5 text-on-surface-variant hover:bg-surface-bright"
-          >
-            <MoreVertical size={16} />
-          </button>
-        </div>
-      </button>
+        </button>
+        <button
+          type="button"
+          aria-label="More actions"
+          onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
+          className="flex items-center justify-center rounded-r-2xl px-3 text-on-surface-variant hover:bg-surface-bright"
+        >
+          <MoreVertical size={16} />
+        </button>
+      </div>
 
       {menuOpen && (
         <div

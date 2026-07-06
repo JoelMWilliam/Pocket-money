@@ -78,7 +78,7 @@ export default function App() {
 
   return (
     <div className="flex h-[100dvh] flex-col bg-black">
-      <div className="scroll-container flex-1 no-scrollbar safe-top safe-bottom pb-24">
+      <div className="scroll-container flex-1 no-scrollbar safe-top pb-28" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
         <ScreenComponent setScreen={setScreen} />
       </div>
       {showQuickAdd && <QuickAddButton onClick={() => setQuickAddOpen(true)} />}

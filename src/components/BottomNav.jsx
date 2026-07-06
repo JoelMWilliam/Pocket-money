@@ -24,7 +24,7 @@ export default function BottomNav({ current, onChange }) {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-outline-variant bg-black/90 backdrop-blur-md safe-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none border-t border-outline-variant bg-black/90 backdrop-blur-md safe-bottom">
         <div className="mx-auto flex max-w-md items-center justify-around px-2 pb-safe">
           {ITEMS.map((item) => {
             const Icon = item.icon
@@ -39,7 +39,7 @@ export default function BottomNav({ current, onChange }) {
                     onChange(item.id)
                   }
                 }}
-                className={`flex flex-col items-center justify-center py-2 px-3 transition-colors ${
+                className={`pointer-events-auto flex flex-col items-center justify-center py-2 px-3 transition-colors ${
                   active ? 'text-primary' : 'text-on-surface-variant'
                 }`}
                 aria-label={item.label}

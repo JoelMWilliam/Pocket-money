@@ -13,7 +13,7 @@ export const zustandStorage = {
     return localStorage.getItem(`${PREFIX}${name}`)
   },
   setItem: async (name, value) => {
-    await storageSet(name, JSON.parse(value))
+    await storageSet(name, value)
   },
   removeItem: async (name) => {
     await storageRemove(name)

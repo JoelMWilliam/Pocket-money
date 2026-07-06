@@ -9,6 +9,7 @@ export default function Onboarding({ onComplete }) {
   const [confirmPin, setConfirmPin] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [useDemo, setUseDemo] = useState(false)
   const createUser = useAppStore((state) => state.createUser)
 
   const handleCreate = async (e) => {
@@ -20,7 +21,7 @@ export default function Onboarding({ onComplete }) {
 
     setLoading(true)
     try {
-      await createUser(username.trim(), pin, { useDemo: true })
+      await createUser(username.trim(), pin, { useDemo })
       onComplete?.()
     } catch (err) {
       setError(err.message)
@@ -128,6 +129,16 @@ export default function Onboarding({ onComplete }) {
           </div>
 
           {error && <p className="text-center text-sm text-error">{error}</p>}
+
+          <label className="flex items-center gap-3 text-sm text-on-surface-variant">
+            <input
+              type="checkbox"
+              checked={useDemo}
+              onChange={(e) => setUseDemo(e.target.checked)}
+              className="h-5 w-5 rounded border-outline-variant bg-surface text-primary"
+            />
+            Load sample data to explore the app
+          </label>
 
           <button
             type="submit"

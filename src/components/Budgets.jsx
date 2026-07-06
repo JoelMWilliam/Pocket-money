@@ -114,7 +114,7 @@ export default function Budgets() {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant"
+            className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 pb-24 border-t border-outline-variant"
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-on-surface">{editing ? 'Edit Budget' : 'New Budget'}</h2>

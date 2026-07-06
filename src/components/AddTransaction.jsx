@@ -247,34 +247,33 @@ export default function AddTransaction({ editing, onClose }) {
           </div>
         </div>
 
-        <div className="overflow-y-auto">
-          {/* Type selector */}
-          <div className="grid grid-cols-3 gap-2 p-4">
-            {TYPES.map((t) => {
-              const Icon = t.icon
-              const active = type === t.id
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setType(t.id)}
-                  className={`flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition-colors ${
-                    active
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface text-on-surface-variant'
-                  }`}
-                >
-                  <Icon size={16} /> {t.label}
-                </button>
-              )
-            })}
-          </div>
+        {/* Type selector */}
+        <div className="flex-none grid grid-cols-3 gap-2 p-4">
+          {TYPES.map((t) => {
+            const Icon = t.icon
+            const active = type === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => setType(t.id)}
+                className={`flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium transition-colors ${
+                  active
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface text-on-surface-variant'
+                }`}
+              >
+                <Icon size={16} /> {t.label}
+              </button>
+            )
+          })}
+        </div>
 
-          {step === 1 && (
-            <div className="px-5 pb-6">
-            <div className="mb-6 text-center">
+        {step === 1 && (
+          <div className="flex-1 overflow-y-auto px-5 pb-6">
+            <div className="mb-4 text-center">
               <p className="text-sm text-on-surface-variant">Amount</p>
               <div className="mt-2 flex items-center justify-center gap-2">
-                <p className="text-5xl font-bold text-on-surface">LKR {amount || '0.00'}</p>
+                <p className="text-4xl font-bold text-on-surface">LKR {amount || '0.00'}</p>
                 <button
                   type="button"
                   onClick={() => setAmount('')}
@@ -285,30 +284,31 @@ export default function AddTransaction({ editing, onClose }) {
               </div>
             </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                {numpadKeys.map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => handleNumpad(key)}
-                    className="rounded-2xl bg-surface py-4 text-xl font-medium text-on-surface active:bg-surface-bright"
-                  >
-                    {key === 'back' ? '⌫' : key}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setStep(2)}
-                disabled={!Number(amount)}
-                className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-base font-semibold text-on-primary disabled:opacity-40"
-              >
-                Continue
-              </button>
+            <div className="grid grid-cols-3 gap-2">
+              {numpadKeys.map((key) => (
+                <button
+                  key={key}
+                  onClick={() => handleNumpad(key)}
+                  className="rounded-2xl bg-surface py-3 text-xl font-medium text-on-surface active:bg-surface-bright"
+                  aria-label={key === 'back' ? 'Backspace' : `Number ${key}`}
+                >
+                  {key === 'back' ? '⌫' : key}
+                </button>
+              ))}
             </div>
-          )}
 
-          {step === 2 && (
-            <div className="px-5 pb-24">
+            <button
+              onClick={() => setStep(2)}
+              disabled={!Number(amount)}
+              className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-base font-semibold text-on-primary disabled:opacity-40"
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="flex-1 overflow-y-auto px-5 pb-24">
             <div className="mb-4">
               <label className="mb-2 block text-xs font-medium text-on-surface-variant">Account</label>
               <div className="grid grid-cols-2 gap-2">
@@ -564,7 +564,6 @@ export default function AddTransaction({ editing, onClose }) {
             </div>
           </div>
         )}
-        </div>
       </div>
     </div>
   )
