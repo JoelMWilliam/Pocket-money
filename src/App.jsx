@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { App as CapApp } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
 import { useAppStore, registerActivityListeners } from './store/useAppStore'
 import { useTheme } from './hooks/useTheme'
 import BottomNav from './components/BottomNav'
@@ -48,24 +50,128 @@ const SCREENS = {
   settings: Settings
 }
 
+const HOME_SCREEN = 'dashboard'
+
 export default function App() {
-  const [screen, setScreen] = useState('dashboard')
+  const [screen, setScreen] = useState(HOME_SCREEN)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [rehydrated, setRehydrated] = useState(false)
+  const [exitConfirm, setExitConfirm] = useState(false)
+  const historyRef = useRef([HOME_SCREEN])
   const currentUser = useAppStore((state) => state.auth.currentUser)
   const isLocked = useAppStore((state) => state.auth.isLocked)
   const users = useAppStore((state) => Object.keys(state.auth.users))
   const seedColor = useAppStore((state) => state.settings.seedColor)
   const isDark = useAppStore((state) => state.settings.isDark)
+  const persistUserData = useAppStore((state) => state.persistUserData)
 
   useEffect(() => {
     registerActivityListeners()
   }, [])
 
+  // Track rehydration so we don't flash onboarding while the store loads.
   useEffect(() => {
-    if (currentUser) setScreen('dashboard')
+    const unsub = useAppStore.persist.onFinishHydration(() => {
+      setRehydrated(true)
+    })
+    if (useAppStore.persist.hasHydrated?.()) {
+      setRehydrated(true)
+    }
+    return unsub
+  }, [])
+
+  useEffect(() => {
+    if (currentUser) setScreen(HOME_SCREEN)
   }, [currentUser])
 
+  // Sync screen changes to navigation history.
+  useEffect(() => {
+    const history = historyRef.current
+    if (history[history.length - 1] !== screen) {
+      history.push(screen)
+      if (history.length > 20) history.shift()
+    }
+  }, [screen])
+
   useTheme(seedColor, isDark)
+
+  // Android back-button / gesture handling.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    let removeListener = null
+    let exitTimer = null
+
+    const handleBack = async () => {
+      // 1. Close any open modal / quick-add first.
+      if (quickAddOpen) {
+        setQuickAddOpen(false)
+        return
+      }
+
+      // 2. If we are inside a secondary screen, navigate back.
+      if (screen !== HOME_SCREEN) {
+        const history = historyRef.current
+        history.pop() // remove current
+        const previous = history[history.length - 1] || HOME_SCREEN
+        setScreen(previous)
+        return
+      }
+
+      // 3. On dashboard: confirm once before exiting.
+      if (exitConfirm) {
+        await flushAndExit()
+        return
+      }
+      setExitConfirm(true)
+      exitTimer = setTimeout(() => setExitConfirm(false), 2000)
+    }
+
+    const flushAndExit = async () => {
+      try {
+        await persistUserData()
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Flush on exit failed', e)
+      }
+      CapApp.exitApp()
+    }
+
+    CapApp.addListener('backButton', handleBack).then((listener) => {
+      removeListener = listener
+    })
+
+    return () => {
+      if (removeListener) removeListener.remove()
+      if (exitTimer) clearTimeout(exitTimer)
+    }
+  }, [screen, quickAddOpen, exitConfirm, persistUserData])
+
+  // Flush data when the app goes to background so it survives a quick kill.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    let removePause = null
+    CapApp.addListener('pause', async () => {
+      try {
+        await persistUserData()
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Pause flush failed', e)
+      }
+    }).then((listener) => {
+      removePause = listener
+    })
+    return () => {
+      if (removePause) removePause.remove()
+    }
+  }, [persistUserData])
+
+  if (!rehydrated) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center bg-black">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
+  }
 
   // Auth flow
   if (!currentUser) {
@@ -90,6 +196,13 @@ export default function App() {
       {showQuickAdd && <QuickAddButton onClick={() => setQuickAddOpen(true)} />}
       <BottomNav current={screen} onChange={setScreen} />
       {quickAddOpen && <AddTransaction onClose={() => setQuickAddOpen(false)} />}
+      {exitConfirm && (
+        <div className="pointer-events-none fixed bottom-24 left-0 right-0 z-50 flex justify-center">
+          <div className="rounded-full bg-surface px-4 py-2 text-xs text-on-surface shadow-lg">
+            Press back again to exit
+          </div>
+        </div>
+      )}
     </div>
   )
 }

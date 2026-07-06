@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 const IS_NATIVE = Capacitor.isNativePlatform()
 const PREFIX = 'pm-'
 
+// Zustand persist calls setItem with a JSON string and expects getItem to return one.
 export const zustandStorage = {
   getItem: async (name) => {
     if (IS_NATIVE) {
@@ -13,10 +14,19 @@ export const zustandStorage = {
     return localStorage.getItem(`${PREFIX}${name}`)
   },
   setItem: async (name, value) => {
-    await storageSet(name, value)
+    // value is already a JSON string from zustand persist; store as-is.
+    if (IS_NATIVE) {
+      await Preferences.set({ key: `${PREFIX}${name}`, value })
+    } else {
+      localStorage.setItem(`${PREFIX}${name}`, value)
+    }
   },
   removeItem: async (name) => {
-    await storageRemove(name)
+    if (IS_NATIVE) {
+      await Preferences.remove({ key: `${PREFIX}${name}` })
+    } else {
+      localStorage.removeItem(`${PREFIX}${name}`)
+    }
   }
 }
 

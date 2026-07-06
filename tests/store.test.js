@@ -97,7 +97,7 @@ describe('useAppStore auth', () => {
 
   it('locks and unlocks with the correct PIN', async () => {
     await createTestUser()
-    useAppStore.getState().lock()
+    await useAppStore.getState().lock()
     expect(useAppStore.getState().auth.isLocked).toBe(true)
 
     await useAppStore.getState().unlock('1234')

@@ -144,6 +144,7 @@ export const useAppStore = create(
         get().recalculateBalances()
         get().rolloverBudgets()
         await get().persistUserData()
+        await get().saveAuthState()
       },
 
       login: async (username, pin) => {
@@ -191,18 +192,19 @@ export const useAppStore = create(
         }))
         get().recalculateBalances()
         get().rolloverBudgets()
+        await get().saveAuthState()
       },
 
-      logout: () => {
-        get().saveCurrentUserData()
+      logout: async () => {
+        await get().persistUserData()
         set((state) => ({
           auth: { ...state.auth, currentUser: null, isLocked: false, lockAt: null },
           ...getEmptyUserData()
         }))
       },
 
-      lock: () => {
-        get().saveCurrentUserData()
+      lock: async () => {
+        await get().persistUserData()
         set((state) => ({
           auth: { ...state.auth, isLocked: true, lockAt: Date.now() }
         }))
@@ -286,17 +288,17 @@ export const useAppStore = create(
         const username = auth.currentUser
         if (!username) throw new Error('No active user')
         const credentialId = await registerBiometric(username)
-        get().updateUserSettings(username, {
+        await get().updateUserSettings(username, {
           biometricEnabled: true,
           biometricCredentialId: credentialId
         })
       },
 
-      disableBiometric: () => {
+      disableBiometric: async () => {
         const { auth } = get()
         const username = auth.currentUser
         if (!username) return
-        get().updateUserSettings(username, {
+        await get().updateUserSettings(username, {
           biometricEnabled: false,
           biometricCredentialId: null
         })
@@ -344,6 +346,15 @@ export const useAppStore = create(
         const { auth, usersData } = get()
         if (!auth.currentUser) return
         await storageSet(`userdata-${auth.currentUser}`, usersData[auth.currentUser])
+        // Direct auth backup so we don't depend solely on zustand persist timing.
+        await storageSet('auth-backup', auth)
+        await storageSet('usersdata-backup', usersData)
+      },
+
+      saveAuthState: async () => {
+        const { auth, usersData } = get()
+        await storageSet('auth-backup', auth)
+        await storageSet('usersdata-backup', usersData)
       },
 
       loadUserData: async (username) => {
@@ -355,7 +366,7 @@ export const useAppStore = create(
         }
       },
 
-      updateUserSettings: (username, patch) => {
+      updateUserSettings: async (username, patch) => {
         set((state) => ({
           auth: {
             ...state.auth,
@@ -365,10 +376,10 @@ export const useAppStore = create(
             }
           }
         }))
-        get().persistUserData()
+        await get().persistUserData()
       },
 
-      deleteUser: (username) => {
+      deleteUser: async (username) => {
         set((state) => {
           const { [username]: _, ...remainingUsers } = state.auth.users
           const { [username]: __, ...remainingData } = state.usersData
@@ -383,8 +394,8 @@ export const useAppStore = create(
             ...(isCurrent ? getEmptyUserData() : {})
           }
         })
-        storageRemove(`userdata-${username}`)
-        get().persistUserData()
+        await storageRemove(`userdata-${username}`)
+        await get().persistUserData()
       },
 
       // Cloud sync state
@@ -940,16 +951,59 @@ export const useAppStore = create(
       storage: zustandStorage,
       partialize: (state) => {
         const { auth, usersData } = state
+        const activeUser = auth.currentUser
+        // Also snapshot the active user's live data into usersData so a single
+        // zustand persist write captures everything. This avoids relying on a
+        // separate, possibly-raced `persistUserData` call before the app dies.
+        if (activeUser) {
+          const activeData = {
+            settings: state.settings,
+            accounts: state.accounts,
+            categories: state.categories,
+            transactions: state.transactions,
+            budgets: state.budgets,
+            goals: state.goals,
+            debts: state.debts,
+            recurring: state.recurring,
+            investments: state.investments,
+            loans: state.loans,
+            templates: state.templates,
+            rules: state.rules
+          }
+          return {
+            auth,
+            usersData: { ...usersData, [activeUser]: activeData }
+          }
+        }
         return { auth, usersData }
       },
       onRehydrateStorage: () => async (state) => {
-        if (state?.auth?.currentUser) {
-          const stored = await storageGet(`userdata-${state.auth.currentUser}`, null)
+        if (!state) return
+        let auth = state.auth
+        let usersData = state.usersData
+        // If zustand persist is empty (e.g. first launch after a force-kill),
+        // try the explicit auth backups.
+        if (!auth || Object.keys(auth.users || {}).length === 0) {
+          const backupAuth = await storageGet('auth-backup', null)
+          const backupUsersData = await storageGet('usersdata-backup', null)
+          if (backupAuth) auth = backupAuth
+          if (backupUsersData) usersData = backupUsersData
+          if (auth) state.auth = auth
+          if (usersData) state.usersData = usersData
+        }
+        const username = auth?.currentUser
+        if (username) {
+          // Prefer the dedicated per-user backup if it exists.
+          const stored = await storageGet(`userdata-${username}`, null)
           if (stored) {
-            state.usersData[state.auth.currentUser] = stored
+            state.usersData[username] = stored
+            usersData = state.usersData
           }
-          const userData = state.usersData[state.auth.currentUser] || getEmptyUserData()
-          Object.assign(state, userData)
+          const userData = usersData[username] || getEmptyUserData()
+          // Merge safely without mutating the frozen persist state object.
+          Object.keys(userData).forEach((key) => {
+            if (key in state) state[key] = userData[key]
+          })
           state.recalculateBalances?.()
           state.rolloverBudgets?.()
           state.auth.isLocked = true

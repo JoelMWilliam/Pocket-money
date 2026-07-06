@@ -90,6 +90,12 @@ export default function Loans() {
         </div>
       </section>
 
+      <div className="mb-4 rounded-2xl border border-outline-variant bg-surface p-3">
+        <p className="text-xs text-on-surface-variant">
+          For formal loans, credit cards, and interest-based payoff plans with Avalanche / Snowball strategies, use the <span className="font-semibold text-primary">Debts</span> screen.
+        </p>
+      </div>
+
       <section className="space-y-3">
         {loans.map((loan) => {
           const remaining = loan.amount - (loan.repaid || 0)
