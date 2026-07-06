@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, PiggyBank, Lightbulb } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, PiggyBank, Lightbulb, Calendar, AlertCircle } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, getCurrentMonth } from '../lib/utils'
 import TransactionItem from './TransactionItem'
 import UserSwitcher from './UserSwitcher'
 
 export default function Dashboard({ setScreen }) {
-  const { auth, accounts, transactions, goals, budgets, categories, getMonthlyTotals, getTotalBalance } =
+  const { auth, accounts, transactions, goals, budgets, categories, recurring, getMonthlyTotals, getTotalBalance } =
     useAppStore()
 
   const totalBalance = getTotalBalance()
@@ -55,6 +55,15 @@ export default function Dashboard({ setScreen }) {
   }, [totalBalance, budgets, transactions])
 
   const topGoals = goals.slice(0, 2)
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const next7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const upcomingBills = useMemo(() => {
+    return recurring
+      .filter((r) => r.active && r.type === 'expense' && r.nextDueDate >= todayStr && r.nextDueDate <= next7Days)
+      .sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate))
+  }, [recurring, todayStr, next7Days])
+  const upcomingTotal = upcomingBills.reduce((sum, r) => sum + r.amount, 0)
 
   return (
     <div className="animate-fade-in px-4 pt-6">
@@ -137,6 +146,48 @@ export default function Dashboard({ setScreen }) {
           </p>
         )}
       </section>
+
+      {/* Upcoming Bills */}
+      {upcomingBills.length > 0 && (
+        <section className="mb-5 rounded-3xl bg-surface p-5 border border-outline-variant">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="rounded-full bg-primary-container p-1.5 text-primary">
+                <Calendar size={16} />
+              </div>
+              <h2 className="text-base font-semibold text-on-surface">Upcoming Bills</h2>
+            </div>
+            <button
+              onClick={() => setScreen('recurring')}
+              className="flex items-center gap-1 text-sm text-primary"
+            >
+              See all <ArrowRight size={14} />
+            </button>
+          </div>
+          <div className="mb-3 rounded-2xl bg-black p-3">
+            <p className="text-xs text-on-surface-variant">Due in next 7 days</p>
+            <p className="text-lg font-semibold text-on-surface">{formatLKR(upcomingTotal)}</p>
+          </div>
+          <div className="space-y-2">
+            {upcomingBills.slice(0, 3).map((item) => {
+              const category = categories.find((c) => c.id === item.categoryId)
+              const isDueSoon = item.nextDueDate <= next7Days && item.nextDueDate >= todayStr
+              return (
+                <div key={item.id} className="flex items-center justify-between rounded-xl bg-black p-3">
+                  <div className="flex items-center gap-2">
+                    {isDueSoon && <AlertCircle size={14} className="text-primary" />}
+                    <p className="text-sm text-on-surface">{item.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-on-surface">{formatLKR(item.amount)}</p>
+                    <p className="text-[10px] text-on-surface-variant">{item.nextDueDate}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Accounts Quick View */}
       <section className="mb-5">

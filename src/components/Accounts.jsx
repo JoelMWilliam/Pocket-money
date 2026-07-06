@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Wallet2, Building2, Banknote, CreditCard, Landmark, X } from 'lucide-react'
+import { Plus, Wallet2, Building2, Banknote, CreditCard, Landmark, X, CheckCircle2, Scale } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, generateId } from '../lib/utils'
 import * as LucideIcons from 'lucide-react'
@@ -17,9 +17,11 @@ const ACCOUNT_TYPES = [
 const ACCOUNT_ICONS = ['Building2', 'Banknote', 'Wallet2', 'CreditCard', 'Landmark', 'PiggyBank', 'Coins']
 
 export default function Accounts() {
-  const { accounts, addAccount, updateAccount, deleteAccount } = useAppStore()
+  const { accounts, addAccount, updateAccount, deleteAccount, reconcileAccount } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [reconciling, setReconciling] = useState(null)
+  const [statementBalance, setStatementBalance] = useState('')
 
   const [form, setForm] = useState({
     name: '',
@@ -77,6 +79,20 @@ export default function Accounts() {
   }
 
   const total = accounts.reduce((sum, a) => sum + a.balance, 0)
+  const todayStr = new Date().toISOString().slice(0, 10)
+
+  const openReconcile = (account) => {
+    setReconciling(account)
+    setStatementBalance(String(account.balance))
+  }
+
+  const handleReconcile = (e) => {
+    e.preventDefault()
+    if (!reconciling) return
+    reconcileAccount(reconciling.id, Number(statementBalance) || 0)
+    setReconciling(null)
+    setStatementBalance('')
+  }
 
   return (
     <div className="animate-fade-in px-4 pt-6">
@@ -103,13 +119,19 @@ export default function Accounts() {
         {accounts.map((account) => {
           const Icon = LucideIcons[account.icon] || Building2
           const typeLabel = ACCOUNT_TYPES.find((t) => t.id === account.type)?.label || account.type
+          const isReconciled =
+            account.reconciledBalance !== undefined &&
+            Math.abs((account.reconciledBalance || 0) - account.balance) < 0.01
+          const reconciledToday = account.lastReconciledAt && new Date(account.lastReconciledAt).toISOString().slice(0, 10) === todayStr
           return (
-            <button
+            <div
               key={account.id}
-              onClick={() => openEdit(account)}
-              className="flex w-full items-center justify-between rounded-2xl bg-surface p-4 text-left border border-outline-variant active:bg-surface-bright"
+              className="flex w-full items-center justify-between rounded-2xl bg-surface p-4 border border-outline-variant"
             >
-              <div className="flex items-center gap-3">
+              <button
+                onClick={() => openEdit(account)}
+                className="flex flex-1 items-center gap-3 text-left min-w-0 active:bg-surface-bright"
+              >
                 <div
                   className="rounded-xl p-2.5"
                   style={{ backgroundColor: `${account.color}22` }}
@@ -119,10 +141,33 @@ export default function Accounts() {
                 <div className="text-left">
                   <p className="text-sm font-medium text-on-surface">{account.name}</p>
                   <p className="text-xs text-on-surface-variant">{typeLabel}</p>
+                  <div className="mt-1 flex items-center gap-1">
+                    {isReconciled ? (
+                      <>
+                        <CheckCircle2 size={12} className="text-green-400" />
+                        <span className="text-[10px] text-green-400">{reconciledToday ? 'Reconciled today' : 'Reconciled'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Scale size={12} className="text-on-surface-variant" />
+                        <span className="text-[10px] text-on-surface-variant">Unreconciled</span>
+                      </>
+                    )}
+                  </div>
                 </div>
+              </button>
+              <div className="flex-shrink-0 text-right ml-3">
+                <p className="text-base font-semibold text-on-surface">{formatLKR(account.balance)}</p>
+                <button
+                  type="button"
+                  aria-label={`Reconcile ${account.name}`}
+                  onClick={(e) => { e.stopPropagation(); openReconcile(account) }}
+                  className="mt-1 text-xs text-primary"
+                >
+                  Reconcile
+                </button>
               </div>
-              <p className="text-base font-semibold text-on-surface">{formatLKR(account.balance)}</p>
-            </button>
+            </div>
           )
         })}
       </section>
@@ -224,6 +269,69 @@ export default function Accounts() {
               </button>
             </div>
           </form>
+          </div>
+        </ModalRoot>
+      )}
+      {reconciling && (
+        <ModalRoot>
+          <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 backdrop-blur-sm">
+            <form
+              onSubmit={handleReconcile}
+              className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 pb-24 border-t border-outline-variant"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-on-surface">Reconcile {reconciling.name}</h2>
+                <button
+                  type="button"
+                  onClick={() => { setReconciling(null); setStatementBalance('') }}
+                  className="rounded-full p-2 text-on-surface-variant hover:bg-surface-bright"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl bg-black p-4">
+                  <p className="text-xs text-on-surface-variant">App balance</p>
+                  <p className="text-lg font-semibold text-on-surface">{formatLKR(reconciling.balance)}</p>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-on-surface-variant">Statement balance</label>
+                  <input
+                    autoFocus
+                    required
+                    type="number"
+                    step="0.01"
+                    value={statementBalance}
+                    onChange={(e) => setStatementBalance(e.target.value)}
+                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                {statementBalance !== '' && (
+                  <div className={`rounded-2xl p-4 ${Math.abs(Number(statementBalance) - reconciling.balance) < 0.01 ? 'bg-green-400/10' : 'bg-error/10'}`}>
+                    <p className="text-xs text-on-surface-variant">Difference</p>
+                    <p className={`text-lg font-semibold ${Math.abs(Number(statementBalance) - reconciling.balance) < 0.01 ? 'text-green-400' : 'text-error'}`}>
+                      {formatLKR(Number(statementBalance) - reconciling.balance)}
+                    </p>
+                    {Math.abs(Number(statementBalance) - reconciling.balance) < 0.01 ? (
+                      <p className="mt-1 text-xs text-green-400">Balances match.</p>
+                    ) : (
+                      <p className="mt-1 text-xs text-error">Review missing or duplicate transactions.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                className="mt-6 w-full rounded-2xl bg-primary py-3 text-sm font-semibold text-on-primary"
+              >
+                Mark Reconciled
+              </button>
+            </form>
           </div>
         </ModalRoot>
       )}

@@ -478,10 +478,19 @@ export const useAppStore = create(
       addAccount: (account) => {
         const clean = { ...account, name: sanitizeText(account.name, 100) }
         const initialBalance = Number(clean.initialBalance) || Number(clean.balance) || 0
+        const now = Date.now()
         set((state) => ({
           accounts: [
             ...state.accounts,
-            { ...clean, id: generateId(), initialBalance, balance: initialBalance, updatedAt: Date.now() }
+            {
+              ...clean,
+              id: generateId(),
+              initialBalance,
+              balance: initialBalance,
+              reconciledBalance: initialBalance,
+              lastReconciledAt: now,
+              updatedAt: now
+            }
           ]
         }))
         get().recalculateBalances()
@@ -508,6 +517,17 @@ export const useAppStore = create(
           transactions: state.transactions.filter((t) => t.accountId !== id && t.transferTo !== id)
         }))
         get().recalculateBalances()
+        get().persistUserData()
+      },
+
+      reconcileAccount: (id, statementBalance) => {
+        set((state) => ({
+          accounts: state.accounts.map((a) =>
+            a.id === id
+              ? { ...a, reconciledBalance: Number(statementBalance) || 0, lastReconciledAt: Date.now(), updatedAt: Date.now() }
+              : a
+          )
+        }))
         get().persistUserData()
       },
 
