@@ -36,6 +36,7 @@ import { extractReceipts, inlineReceipts } from '../lib/receipts'
 import { shareFile } from '../lib/share'
 import { cloudAuth } from '../lib/api'
 import { canUseBiometrics } from '../lib/biometric'
+import { RegisterModal } from './ModalRoot'
 
 export default function Settings() {
   const {
@@ -652,7 +653,9 @@ export default function Settings() {
       </section>
 
       {health && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <div className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-on-surface">Data Health</h2>
@@ -684,7 +687,8 @@ export default function Settings() {
               Done
             </button>
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       <section className="mb-8 rounded-2xl bg-surface p-4 text-center border border-outline-variant">
@@ -708,7 +712,9 @@ export default function Settings() {
       </section>
 
       {showTheme && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <div className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-on-surface">Accent Color</h2>
@@ -724,6 +730,7 @@ export default function Settings() {
               {PRESET_COLORS.map((c) => (
                 <button
                   key={c.value}
+                  data-color={c.value}
                   onClick={() => {
                     updateSettings({ seedColor: c.value })
                     setShowTheme(false)
@@ -768,11 +775,14 @@ export default function Settings() {
               Done
             </button>
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       {showPin && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleChangePin}
             className="flex w-full max-w-md max-h-[90vh] flex-col animate-slide-up rounded-t-3xl bg-surface border-t border-outline-variant"
@@ -834,10 +844,13 @@ export default function Settings() {
             </div>
           </form>
         </div>
+        </>
       )}
 
       {showUsers && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <div className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-on-surface">Users</h2>
@@ -892,11 +905,14 @@ export default function Settings() {
               Switch User
             </button>
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       {showEncExport && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleEncryptedExport}
             className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant"
@@ -935,10 +951,13 @@ export default function Settings() {
             </button>
           </form>
         </div>
+        </>
       )}
 
       {showEncImport && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleEncryptedImport}
             className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant"
@@ -976,9 +995,13 @@ export default function Settings() {
             </button>
           </form>
         </div>
+        </>
       )}
+
       {showCloud && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <div className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-on-surface">Cloud Sync</h2>
@@ -1076,7 +1099,8 @@ export default function Settings() {
               </form>
             )}
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   )

@@ -23,6 +23,10 @@
   --md-sys-color-outline-variant: #2c2c2e;
 }
 
+svg {
+  pointer-events: none;
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
 }

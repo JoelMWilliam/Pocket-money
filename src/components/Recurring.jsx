@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, X, Trash2, Calendar as CalendarIcon, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import { RegisterModal } from './ModalRoot'
 import { formatLKR, todayInputDate } from '../lib/utils'
 import * as LucideIcons from 'lucide-react'
 
@@ -127,6 +128,7 @@ export default function Recurring() {
         </div>
         <button
           onClick={openNew}
+          aria-label="Add recurring"
           className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
         >
           <Plus size={22} />
@@ -217,7 +219,9 @@ export default function Recurring() {
       </section>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
             className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant"
@@ -332,6 +336,7 @@ export default function Recurring() {
             </div>
           </form>
         </div>
+        </>
       )}
     </div>
   )

@@ -1,6 +1,9 @@
 import { Plus } from 'lucide-react'
+import { useModalCount } from '../contexts/ModalContext'
 
 export default function QuickAddButton({ onClick }) {
+  const modalCount = useModalCount()
+  if (modalCount > 0) return null
   return (
     <button
       onClick={onClick}

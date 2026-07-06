@@ -4,6 +4,8 @@ import { useAppStore } from '../store/useAppStore'
 import { formatLKR, generateId } from '../lib/utils'
 import * as LucideIcons from 'lucide-react'
 
+import ModalRoot from './ModalRoot'
+
 const ACCOUNT_TYPES = [
   { id: 'bank', label: 'Bank', icon: Building2 },
   { id: 'cash', label: 'Cash', icon: Banknote },
@@ -126,7 +128,8 @@ export default function Accounts() {
       </section>
 
       {showForm && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <ModalRoot>
+          <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
             className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 pb-24 border-t border-outline-variant"
@@ -221,7 +224,8 @@ export default function Accounts() {
               </button>
             </div>
           </form>
-        </div>
+          </div>
+        </ModalRoot>
       )}
     </div>
   )

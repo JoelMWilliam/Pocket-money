@@ -1,6 +1,9 @@
-import { BarChart3, TrendingDown, Calendar, Scale, Settings, X, LayoutTemplate, FileSpreadsheet, ShieldCheck, BarChart4, TrendingUp, ArrowRightLeft, Receipt, MessageSquare } from 'lucide-react'
+import { BarChart3, TrendingDown, Calendar, Scale, Settings, X, LayoutTemplate, FileSpreadsheet, ShieldCheck, BarChart4, TrendingUp, ArrowRightLeft, Receipt, MessageSquare, Target } from 'lucide-react'
+
+import { useRegisterModal } from '../contexts/ModalContext'
 
 const MORE_ITEMS = [
+  { id: 'goals', label: 'Goals', icon: Target, desc: 'Savings goals' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, desc: 'Spending insights' },
   { id: 'advancedreports', label: 'Reports', icon: BarChart4, desc: 'Advanced reports' },
   { id: 'networth', label: 'Net Worth', icon: Scale, desc: 'Assets & liabilities' },
@@ -17,6 +20,7 @@ const MORE_ITEMS = [
 ]
 
 export default function MoreMenu({ current, onChange, onClose, onAction }) {
+  useRegisterModal()
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 backdrop-blur-sm">
       <div className="flex w-full max-w-md max-h-[80vh] flex-col animate-slide-up rounded-t-3xl bg-surface border-t border-outline-variant">
@@ -37,6 +41,7 @@ export default function MoreMenu({ current, onChange, onClose, onAction }) {
               return (
                 <button
                   key={item.id}
+                  aria-label={`${item.label} — ${item.desc}`}
                   onClick={() => {
                     if (item.isAction) {
                       onAction?.(item.id)

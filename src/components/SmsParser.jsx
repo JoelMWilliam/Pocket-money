@@ -7,6 +7,8 @@ import { readNativeSms } from '../lib/biometric'
 
 const SmsReader = registerPlugin('SmsReader')
 
+import { useRegisterModal } from '../contexts/ModalContext'
+
 const BANK_PATTERNS = [
   {
     bank: 'Commercial Bank',
@@ -55,6 +57,7 @@ export function parseSmsTransaction(body) {
 }
 
 export default function SmsParser({ onClose }) {
+  useRegisterModal()
   const { accounts, categories, addTransaction } = useAppStore()
   const [permission, setPermission] = useState('prompt')
   const [messages, setMessages] = useState([])

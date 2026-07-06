@@ -59,6 +59,10 @@ export default function App() {
     registerActivityListeners()
   }, [])
 
+  useEffect(() => {
+    if (currentUser) setScreen('dashboard')
+  }, [currentUser])
+
   useTheme(seedColor, isDark)
 
   // Auth flow
@@ -77,7 +81,7 @@ export default function App() {
   const showQuickAdd = ['dashboard', 'accounts', 'transactions', 'budgets', 'goals', 'analytics', 'networth', 'debts', 'recurring', 'investments', 'loans', 'receipts'].includes(screen)
 
   return (
-    <div className="flex h-[100dvh] flex-col bg-black">
+    <div className="relative flex h-[100dvh] flex-col bg-black">
       <div className="scroll-container flex-1 no-scrollbar safe-top pb-28" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
         <ScreenComponent setScreen={setScreen} />
       </div>

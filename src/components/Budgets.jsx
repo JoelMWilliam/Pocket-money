@@ -4,6 +4,8 @@ import { useAppStore } from '../store/useAppStore'
 import { formatLKR, getCurrentMonth } from '../lib/utils'
 import * as LucideIcons from 'lucide-react'
 
+import { RegisterModal } from './ModalRoot'
+
 export default function Budgets() {
   const { budgets, categories, transactions, addBudget, updateBudget, deleteBudget, getBudgetProgress } = useAppStore()
   const [showForm, setShowForm] = useState(false)
@@ -111,7 +113,9 @@ export default function Budgets() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
             className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 pb-24 border-t border-outline-variant"
@@ -189,6 +193,7 @@ export default function Budgets() {
             </div>
           </form>
         </div>
+        </>
       )}
     </div>
   )

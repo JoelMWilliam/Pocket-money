@@ -3,12 +3,15 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import './index.css'
+import { ModalProvider } from './contexts/ModalContext.jsx'
 
 try {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
       <ErrorBoundary>
-        <App />
+        <ModalProvider>
+          <App />
+        </ModalProvider>
       </ErrorBoundary>
     </React.StrictMode>
   )

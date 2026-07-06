@@ -8,6 +8,8 @@ import SplitEditor from './SplitEditor'
 import ReceiptImage from './ReceiptImage'
 import * as LucideIcons from 'lucide-react'
 
+import { useRegisterModal } from '../contexts/ModalContext'
+
 const TYPES = [
   { id: 'expense', label: 'Expense', icon: ArrowUpRight },
   { id: 'income', label: 'Income', icon: ArrowDownLeft },
@@ -15,6 +17,7 @@ const TYPES = [
 ]
 
 export default function AddTransaction({ editing, onClose }) {
+  useRegisterModal()
   const { accounts, categories, templates, addTransaction, updateTransaction, addTemplate } = useAppStore()
 
   const [step, setStep] = useState(1)

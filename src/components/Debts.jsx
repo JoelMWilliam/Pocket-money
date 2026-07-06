@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, X, Trash2, TrendingDown, Calculator, ArrowRight } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import { RegisterModal } from './ModalRoot'
 import { formatLKR } from '../lib/utils'
 
 const STRATEGIES = [
@@ -118,6 +119,7 @@ export default function Debts() {
         </div>
         <button
           onClick={openNew}
+          aria-label="Add debt"
           className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
         >
           <Plus size={22} />
@@ -236,7 +238,9 @@ export default function Debts() {
       </section>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
             className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant"
@@ -334,6 +338,7 @@ export default function Debts() {
             </div>
           </form>
         </div>
+        </>
       )}
     </div>
   )

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Search, SlidersHorizontal, X, Trash2, Tags, CheckSquare, Square, Check } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import { RegisterModal } from './ModalRoot'
 import TransactionItem from './TransactionItem'
 import AddTransaction from './AddTransaction'
 import TagInput from './TagInput'
@@ -237,10 +238,12 @@ export default function Transactions() {
       )}
 
       {showFilters && (
-        <div
-          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/80 backdrop-blur-sm"
-          onClick={() => setShowFilters(false)}
-        >
+        <>
+          <RegisterModal />
+          <div
+            className="fixed inset-0 z-[70] flex items-end justify-center bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowFilters(false)}
+          >
           <div
             className="flex w-full max-w-md max-h-[85vh] flex-col animate-slide-up rounded-t-3xl bg-surface border-t border-outline-variant"
             onClick={(e) => e.stopPropagation()}
@@ -365,6 +368,7 @@ export default function Transactions() {
             </div>
           </div>
         </div>
+      </>
       )}
     </div>
   )

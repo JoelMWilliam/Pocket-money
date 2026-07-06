@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, X, Trash2, Target, PiggyBank } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import { RegisterModal } from './ModalRoot'
 import { formatLKR } from '../lib/utils'
 
 export default function Goals() {
@@ -60,6 +61,7 @@ export default function Goals() {
         </div>
         <button
           onClick={openNew}
+          aria-label="Add goal"
           className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
         >
           <Plus size={22} />
@@ -118,7 +120,9 @@ export default function Goals() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
             className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-6 border-t border-outline-variant"
@@ -226,6 +230,7 @@ export default function Goals() {
             </div>
           </form>
         </div>
+        </>
       )}
     </div>
   )

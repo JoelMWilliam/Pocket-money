@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { User, X, Shield } from 'lucide-react'
+import { RegisterModal } from './ModalRoot'
 import { useAppStore } from '../store/useAppStore'
 
 export default function UserSwitcher() {
@@ -32,7 +33,9 @@ export default function UserSwitcher() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/80 backdrop-blur-sm">
+        <>
+          <RegisterModal />
+          <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <div className="w-full max-w-md animate-slide-up rounded-t-3xl bg-surface p-5 border-t border-outline-variant">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-on-surface">Switch user</h2>
@@ -71,7 +74,8 @@ export default function UserSwitcher() {
               Selecting another user will lock the app. Re-enter your PIN or biometric to continue.
             </p>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </>
   )
