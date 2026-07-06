@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, X, Trash2, ShieldCheck } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import ModalRoot from './ModalRoot'
 
 const FIELDS = [
   { id: 'note', name: 'Note' },
@@ -133,6 +134,7 @@ export default function Rules() {
       )}
 
       {showForm && (
+        <ModalRoot>
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
@@ -226,6 +228,7 @@ export default function Rules() {
             </div>
           </form>
         </div>
+        </ModalRoot>
       )}
     </div>
   )

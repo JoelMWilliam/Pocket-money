@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, X, Trash2, ArrowRightLeft } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR } from '../lib/utils'
+import ModalRoot from './ModalRoot'
 
 export default function Loans() {
   const { loans, addLoan, updateLoan, deleteLoan } = useAppStore()
@@ -133,6 +134,7 @@ export default function Loans() {
       )}
 
       {showForm && (
+        <ModalRoot>
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
@@ -253,6 +255,7 @@ export default function Loans() {
             </div>
           </form>
         </div>
+        </ModalRoot>
       )}
     </div>
   )

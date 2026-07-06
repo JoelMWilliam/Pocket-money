@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Plus, X, Trash2, LayoutTemplate } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR } from '../lib/utils'
-import * as LucideIcons from 'lucide-react'
+import ModalRoot from './ModalRoot'
 
 const TYPES = [
   { id: 'expense', name: 'Expense' },
@@ -151,6 +151,7 @@ export default function Templates({ setScreen }) {
       )}
 
       {showForm && (
+        <ModalRoot>
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
@@ -226,6 +227,7 @@ export default function Templates({ setScreen }) {
             </button>
           </form>
         </div>
+        </ModalRoot>
       )}
     </div>
   )

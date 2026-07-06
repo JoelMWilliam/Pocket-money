@@ -3,6 +3,7 @@ import { X, Receipt, Trash2, ArrowRight } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, formatShortDate } from '../lib/utils'
 import ReceiptImage from './ReceiptImage'
+import ModalRoot from './ModalRoot'
 
 export default function Receipts({ setScreen }) {
   const { transactions, accounts, categories, updateTransaction } = useAppStore()
@@ -61,6 +62,7 @@ export default function Receipts({ setScreen }) {
       )}
 
       {selected && (
+        <ModalRoot>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4">
           <button
             onClick={() => setSelected(null)}
@@ -92,6 +94,7 @@ export default function Receipts({ setScreen }) {
             </div>
           </div>
         </div>
+        </ModalRoot>
       )}
     </div>
   )
