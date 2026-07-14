@@ -1207,14 +1207,25 @@ export const useAppStore = create(
         }
       },
       migrate: (persistedState, version) => {
-        if (version === 0) {
-          const usersData = persistedState?.usersData || {}
-          Object.keys(usersData).forEach((username) => {
-            usersData[username].settings = usersData[username].settings || {}
-            usersData[username].settings.onboardingComplete = true
-          })
+        try {
+          if (version === 0 && persistedState && typeof persistedState === 'object') {
+            const usersData = { ...persistedState.usersData }
+            Object.keys(usersData).forEach((username) => {
+              const userData = usersData[username]
+              if (userData && typeof userData === 'object') {
+                usersData[username] = {
+                  ...userData,
+                  settings: { ...(userData.settings || {}), onboardingComplete: true }
+                }
+              }
+            })
+            return { ...persistedState, usersData }
+          }
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to migrate persisted state', err)
         }
-        return persistedState
+        return persistedState || {}
       }
     }
   )
