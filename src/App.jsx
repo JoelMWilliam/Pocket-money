@@ -69,6 +69,7 @@ export default function App() {
   const users = useAppStore((state) => Object.keys(state.auth.users))
   const seedColor = useAppStore((state) => state.settings.seedColor)
   const isDark = useAppStore((state) => state.settings.isDark)
+  const settings = useAppStore((state) => state.settings)
   const persistUserData = useAppStore((state) => state.persistUserData)
 
   useEffect(() => {
@@ -224,6 +225,10 @@ export default function App() {
   }
 
   // Auth flow
+  if (!settings.onboardingComplete) {
+    return <Onboarding onComplete={() => setRehydrated(true)} />
+  }
+
   if (!currentUser) {
     if (users.length === 0) {
       return <Onboarding onComplete={() => setRehydrated(true)} />

@@ -247,6 +247,7 @@ export default function Onboarding({ onComplete }) {
   }
 
   const finishOnboarding = async () => {
+    useAppStore.getState().updateSettings({ onboardingComplete: true })
     await storageSet('first-boot-permissions', true)
     onComplete?.()
   }

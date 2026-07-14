@@ -95,7 +95,7 @@ function normalizeUserData(data) {
 function getEmptyUserData() {
   const now = Date.now()
   return {
-    settings: { seedColor: '#0A84FF', isDark: true, currency: 'LKR', lastBudgetMonth: null, onboardingGoal: null, googleDriveBackupEnabled: false, googleDriveBackupInterval: 'daily', googleDriveBackupLastAt: null, googleDriveBackupEmail: null, smsAutoImportEnabled: false, smsLastImportedAt: null, smsImportedIds: [], notificationsEnabled: false, updatedAt: now },
+    settings: { seedColor: '#0A84FF', isDark: true, currency: 'LKR', lastBudgetMonth: null, onboardingGoal: null, onboardingComplete: false, googleDriveBackupEnabled: false, googleDriveBackupInterval: 'daily', googleDriveBackupLastAt: null, googleDriveBackupEmail: null, smsAutoImportEnabled: false, smsLastImportedAt: null, smsImportedIds: [], notificationsEnabled: false, updatedAt: now },
     accounts: [],
     categories: [
       { id: 'cat-food', name: 'Food & Dining', icon: 'Utensils', color: '#FF9500', type: 'expense', updatedAt: now },
@@ -1140,6 +1140,7 @@ export const useAppStore = create(
     }),
     {
       name: 'pocket-money-storage',
+      version: 1,
       storage: zustandStorage,
       partialize: (state) => {
         const { auth, usersData } = state
@@ -1204,6 +1205,16 @@ export const useAppStore = create(
             state.auth.lockAt = Date.now()
           }
         }
+      },
+      migrate: (persistedState, version) => {
+        if (version === 0) {
+          const usersData = persistedState?.usersData || {}
+          Object.keys(usersData).forEach((username) => {
+            usersData[username].settings = usersData[username].settings || {}
+            usersData[username].settings.onboardingComplete = true
+          })
+        }
+        return persistedState
       }
     }
   )
