@@ -11,115 +11,84 @@ export async function canUseBiometrics() {
     supported = false
     return false
   }
-  try {
-    const native = await checkNativeBiometric()
-    if (native) {
-      supported = true
-      return true
-    }
-  } catch (err) {
-    // ignore
-  }
-  if (window.PublicKeyCredential) {
-    supported = true
-    return true
-  }
-  supported = false
-  return false
-}
 
-export async function checkNativeBiometric() {
   try {
-    const result = await BiometricAuth.isAvailable()
-    return result.available
+    const result = await BiometricAuth.checkBiometry()
+    supported = result.isAvailable === true
+    return supported
   } catch (err) {
-    return false
+    // If the plugin is not available (e.g. web), fall back to WebAuthn.
+    supported = !!window.PublicKeyCredential
+    return supported
   }
 }
 
 export async function registerBiometric(username) {
   if (!(await canUseBiometrics())) throw new Error('Biometric authentication not available')
 
-  const nativeAvailable = await checkNativeBiometric()
-  if (nativeAvailable) {
-    const result = await BiometricAuth.authenticate({
-      title: 'Enable Biometric Login',
-      subtitle: `For user ${username}`,
-      cancel: 'Cancel'
+  try {
+    await BiometricAuth.authenticate({
+      reason: 'Enable biometric login for Pocket Money',
+      cancelTitle: 'Cancel',
+      allowDeviceCredential: true,
+      iosFallbackTitle: 'Use PIN',
+      androidTitle: 'Enable Biometric Login',
+      androidSubtitle: 'Authenticate to enable biometric unlock',
+      androidConfirmationRequired: false
     })
-    if (result.verified) {
-      return `native:${username}`
-    }
-    throw new Error('Biometric registration failed')
-  }
-
-  if (window.PublicKeyCredential) {
+    return 'native:biometric'
+  } catch (err) {
+    // Fall back to WebAuthn on browsers.
+    if (!window.PublicKeyCredential) throw new Error('Biometric authentication not available')
     const challenge = new Uint8Array(32)
     window.crypto.getRandomValues(challenge)
     const userId = new TextEncoder().encode(username)
     const publicKey = {
       challenge,
       rp: { name: 'Pocket Money', id: window.location.hostname },
-      user: {
-        id: userId,
-        name: username,
-        displayName: username
-      },
+      user: { id: userId, name: username, displayName: username },
       pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
-      authenticatorSelection: {
-        authenticatorAttachment: 'platform',
-        userVerification: 'required'
-      },
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
       timeout: 60000,
       attestation: 'none'
     }
     const credential = await navigator.credentials.create({ publicKey })
     return credential.id
   }
-
-  throw new Error('Biometric registration failed')
 }
 
 export async function verifyBiometric(credentialId) {
   if (!(await canUseBiometrics())) throw new Error('Biometric authentication not available')
 
-  const nativeAvailable = await checkNativeBiometric()
-  if (nativeAvailable && credentialId?.startsWith('native:')) {
-    const result = await BiometricAuth.authenticate({
-      title: 'Unlock Pocket Money',
-      subtitle: 'Use your biometric credential',
-      cancel: 'Use PIN'
+  try {
+    await BiometricAuth.authenticate({
+      reason: 'Unlock Pocket Money',
+      cancelTitle: 'Use PIN',
+      allowDeviceCredential: true,
+      iosFallbackTitle: 'Use PIN',
+      androidTitle: 'Unlock Pocket Money',
+      androidSubtitle: 'Use your biometric credential',
+      androidConfirmationRequired: false
     })
-    if (result.verified) return true
-    throw new Error('Biometric verification failed')
-  }
-
-  if (window.PublicKeyCredential) {
+    return true
+  } catch (err) {
+    if (!window.PublicKeyCredential) throw new Error('Biometric verification failed')
     const challenge = new Uint8Array(32)
     window.crypto.getRandomValues(challenge)
     const publicKey = {
       challenge,
-      allowCredentials: credentialId
-        ? [{ id: base64ToUint8Array(credentialId), type: 'public-key' }]
-        : [],
+      allowCredentials: credentialId ? [{ id: base64ToUint8Array(credentialId), type: 'public-key' }] : [],
       userVerification: 'required',
       timeout: 60000
     }
     await navigator.credentials.get({ publicKey })
     return true
   }
-
-  throw new Error('Biometric verification failed')
 }
 
 export async function readNativeSms() {
-  try {
-    const result = await SmsReader.getMessages()
-    return result.messages || []
-  } catch (err) {
-    console.error('Native SMS read failed', err)
-    return []
-  }
+  const result = await SmsReader.getMessages()
+  return result.messages || []
 }
 
 function base64ToUint8Array(base64) {

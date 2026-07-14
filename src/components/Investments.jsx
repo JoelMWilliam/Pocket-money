@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, TrendingUp } from 'lucide-react'
+import { X, Trash2, TrendingUp } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR } from '../lib/utils'
 import ModalRoot from './ModalRoot'
@@ -12,7 +12,10 @@ const TYPES = [
   { id: 'other', name: 'Other' }
 ]
 
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
 export default function Investments() {
+  useRegisterQuickAdd(() => openNew())
   const { investments, accounts, addInvestment, updateInvestment, deleteInvestment } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -76,12 +79,6 @@ export default function Investments() {
           <p className="text-sm text-on-surface-variant">Assets & investments</p>
           <h1 className="text-2xl font-bold text-on-surface">Investments</h1>
         </div>
-        <button
-          onClick={openNew}
-          className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
-        >
-          <Plus size={22} />
-        </button>
       </header>
 
       <section className="mb-6 rounded-2xl bg-surface p-4 border border-outline-variant">
@@ -95,11 +92,11 @@ export default function Investments() {
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-black p-3">
+          <div className="rounded-xl bg-surface p-3">
             <p className="text-xs text-on-surface-variant">Total Cost</p>
             <p className="text-sm font-semibold text-on-surface">{formatLKR(totalCost)}</p>
           </div>
-          <div className="rounded-xl bg-black p-3">
+          <div className="rounded-xl bg-surface p-3">
             <p className="text-xs text-on-surface-variant">Unrealized P/L</p>
             <p className={`text-sm font-semibold ${totalGain >= 0 ? 'text-green-400' : 'text-error'}`}>
               {totalGain >= 0 ? '+' : ''}{formatLKR(totalGain)}
@@ -176,7 +173,7 @@ export default function Investments() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="e.g. EPF Balance"
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                 />
               </div>
 
@@ -186,7 +183,7 @@ export default function Investments() {
                   <select
                     value={form.type}
                     onChange={(e) => setForm({ ...form, type: e.target.value })}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   >
                     {TYPES.map((t) => (
                       <option key={t.id} value={t.id}>{t.name}</option>
@@ -199,7 +196,7 @@ export default function Investments() {
                     value={form.symbol}
                     onChange={(e) => setForm({ ...form, symbol: e.target.value })}
                     placeholder="COMB.N0000"
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   />
                 </div>
               </div>
@@ -213,7 +210,7 @@ export default function Investments() {
                     value={form.units}
                     onChange={(e) => setForm({ ...form, units: e.target.value })}
                     placeholder="1"
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   />
                 </div>
                 <div>
@@ -222,7 +219,7 @@ export default function Investments() {
                     value={form.currency}
                     onChange={(e) => setForm({ ...form, currency: e.target.value })}
                     placeholder="LKR"
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   />
                 </div>
               </div>
@@ -236,7 +233,7 @@ export default function Investments() {
                     value={form.purchasePrice}
                     onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })}
                     placeholder="0.00"
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   />
                 </div>
                 <div>
@@ -247,7 +244,7 @@ export default function Investments() {
                     value={form.currentPrice}
                     onChange={(e) => setForm({ ...form, currentPrice: e.target.value })}
                     placeholder="0.00"
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   />
                 </div>
               </div>

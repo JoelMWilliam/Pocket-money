@@ -1,5 +1,5 @@
 import { X, Plus } from 'lucide-react'
-import * as LucideIcons from 'lucide-react'
+import { getIcon } from '../lib/icons'
 
 export default function SplitEditor({ total, splits, categories, onChange }) {
   const expenseCategories = categories.filter((c) => c.type === 'expense')
@@ -30,7 +30,7 @@ export default function SplitEditor({ total, splits, categories, onChange }) {
   const remaining = total - used
 
   return (
-    <div className="rounded-2xl border border-outline-variant bg-black p-3">
+    <div className="rounded-2xl border border-outline-variant bg-surface p-3">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-xs text-on-surface-variant">Total: LKR {total.toFixed(2)}</span>
         <span className={`text-xs font-medium ${remaining === 0 ? 'text-primary' : 'text-error'}`}>
@@ -41,7 +41,7 @@ export default function SplitEditor({ total, splits, categories, onChange }) {
       <div className="space-y-2">
         {splits.map((split) => {
           const category = categories.find((c) => c.id === split.categoryId)
-          const Icon = category?.icon ? LucideIcons[category.icon] : LucideIcons.CircleDollarSign
+          const Icon = category?.icon ? getIcon(category.icon) : getIcon('CircleDollarSign')
           return (
             <div key={split.id} className="flex items-center gap-2">
               <select

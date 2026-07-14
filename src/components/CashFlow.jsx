@@ -107,13 +107,13 @@ export default function CashFlow({ setScreen }) {
           </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-black/30 p-3">
+          <div className="rounded-2xl bg-surface-variant p-3">
             <p className="text-[10px] text-on-surface-variant">Next 7 Days</p>
             <p className={`text-sm font-semibold ${next7DaysTotal >= 0 ? 'text-green-400' : 'text-error'}`}>
               {next7DaysTotal >= 0 ? '+' : ''}{formatLKR(next7DaysTotal)}
             </p>
           </div>
-          <div className="rounded-2xl bg-black/30 p-3">
+          <div className="rounded-2xl bg-surface-variant p-3">
             <p className="text-[10px] text-on-surface-variant">Lowest Point</p>
             <p className="text-sm font-semibold text-on-surface">{lowestPoint ? formatLKR(lowestPoint.balance) : '—'}</p>
           </div>
@@ -127,7 +127,7 @@ export default function CashFlow({ setScreen }) {
 
       <section className="mb-5 rounded-2xl bg-surface p-4 border border-outline-variant">
         <h2 className="mb-3 text-base font-semibold text-on-surface">Upcoming Biggest Expense</h2>
-        <div className="flex items-center justify-between rounded-2xl bg-black p-3">
+        <div className="flex items-center justify-between rounded-2xl bg-surface p-3">
           <div className="flex items-center gap-2">
             <TrendingDown size={18} className="text-error" />
             <span className="text-sm text-on-surface">Single-day outflow</span>
@@ -145,7 +145,7 @@ export default function CashFlow({ setScreen }) {
           {forecast.slice(0, 30).map((day) => (
             <div
               key={day.date}
-              className={`flex items-center justify-between rounded-xl p-3 ${day.date === todayStr ? 'bg-primary-container' : 'bg-black'}`}
+              className={`flex items-center justify-between rounded-xl p-3 ${day.date === todayStr ? 'bg-primary-container' : 'bg-surface'}`}
             >
               <div>
                 <p className={`text-sm ${day.date === todayStr ? 'text-primary' : 'text-on-surface'}`}>{day.label}</p>

@@ -1,0 +1,73 @@
+import {
+  ArrowLeftRight,
+  ArrowRightLeft,
+  Banknote,
+  Briefcase,
+  Building2,
+  Bus,
+  CircleDollarSign,
+  Coins,
+  CreditCard,
+  Film,
+  Fuel,
+  Gift,
+  GraduationCap,
+  HandHeart,
+  HeartPulse,
+  Home,
+  Landmark,
+  PawPrint,
+  Percent,
+  PiggyBank,
+  Plane,
+  Receipt,
+  RotateCcw,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingCart,
+  Smile,
+  TrendingUp,
+  Utensils,
+  Wallet,
+  Wallet2
+} from 'lucide-react'
+
+const ICONS = {
+  ArrowLeftRight,
+  ArrowRightLeft,
+  Banknote,
+  Briefcase,
+  Building2,
+  Bus,
+  CircleDollarSign,
+  Coins,
+  CreditCard,
+  Film,
+  Fuel,
+  Gift,
+  GraduationCap,
+  HandHeart,
+  HeartPulse,
+  Home,
+  Landmark,
+  PawPrint,
+  Percent,
+  PiggyBank,
+  Plane,
+  Receipt,
+  RotateCcw,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingCart,
+  Smile,
+  TrendingUp,
+  Utensils,
+  Wallet,
+  Wallet2
+}
+
+export const ICON_NAMES = Object.keys(ICONS)
+
+export function getIcon(name, fallback = CircleDollarSign) {
+  return ICONS[name] || fallback
+}

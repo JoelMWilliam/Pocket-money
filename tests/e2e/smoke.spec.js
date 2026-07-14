@@ -11,12 +11,9 @@ test.describe('Pocket Money smoke tests', () => {
   })
 
   async function completeOnboarding(page, username = 'Test User', pin = '1234') {
-    await expect(page.locator('text=Your money, private')).toBeVisible()
-    for (let i = 0; i < 4; i++) {
-      const nextBtn = page.locator('button:has-text("Next"), button:has-text("Get Started")').last()
-      await expect(nextBtn).toBeVisible()
-      await nextBtn.click()
-    }
+    await expect(page.locator('text=Pocket Money')).toBeVisible()
+    await page.click('button:has-text("Get Started")')
+    await page.click('button:has-text("Local account")')
     await page.fill('input[placeholder="Your name"]', username)
     await page.locator('input[placeholder="PIN"]').fill(pin)
     await page.locator('input[placeholder="Confirm"]').fill(pin)
@@ -25,7 +22,7 @@ test.describe('Pocket Money smoke tests', () => {
 
   async function createAccount(page, name, balance) {
     await page.click('button:has-text("Accounts")')
-    await page.click('button[aria-label="Add account"]')
+    await page.click('button[aria-label="Add"]')
     await page.fill('input[placeholder="e.g. Commercial Bank"]', name)
     await page.fill('input[type="number"]', String(balance))
     await page.click('button:has-text("Create Account")')
@@ -33,7 +30,7 @@ test.describe('Pocket Money smoke tests', () => {
   }
 
   async function addTransaction(page, amountDigits, accountName, categoryName, type = 'expense', note = '') {
-    await page.click('button[aria-label="Add transaction"]')
+    await page.click('button[aria-label="Add"]')
     await expect(page.locator('text=Add Transaction')).toBeVisible()
     if (type !== 'expense') {
       const label = type === 'income' ? 'Income' : 'Transfer'
@@ -113,7 +110,8 @@ test.describe('Pocket Money smoke tests', () => {
     await createAccount(page, 'Commercial Bank', 50000)
     await createAccount(page, 'Cash', 10000)
 
-    await page.click('button[aria-label="Add transaction"]')
+    await page.click('button:has-text("Home")')
+    await page.click('button[aria-label="Add"]')
     await expect(page.locator('text=Add Transaction')).toBeVisible()
     await page.click('text=Transfer')
     for (const digit of ['5', '0', '0', '0']) {
@@ -143,7 +141,7 @@ test.describe('Pocket Money smoke tests', () => {
     await completeOnboarding(page)
     await page.click('button:has-text("More")')
     await page.getByRole('button', { name: /Goals/ }).click()
-    await page.click('button[aria-label="Add goal"]')
+    await page.click('button[aria-label="Add"]')
     await page.fill('input[placeholder="e.g. Emergency Fund"]', 'Emergency Fund')
     await page.locator('input[type="number"]').nth(0).fill('200000')
     await page.locator('input[type="number"]').nth(1).fill('45000')
@@ -157,7 +155,7 @@ test.describe('Pocket Money smoke tests', () => {
     await completeOnboarding(page)
     await page.click('button:has-text("More")')
     await page.getByRole('button', { name: /Debts/ }).click()
-    await page.click('button[aria-label="Add debt"]')
+    await page.click('button[aria-label="Add"]')
     await page.fill('input[placeholder="Debt name"]', 'Car Loan')
     await page.fill('input[placeholder="Original amount"]', '1000000')
     await page.fill('input[placeholder="Current balance"]', '750000')
@@ -213,7 +211,7 @@ test.describe('Pocket Money smoke tests', () => {
     await createAccount(page, 'Commercial Bank', 50000)
     await page.click('button:has-text("More")')
     await page.getByRole('button', { name: /Recurring/ }).click()
-    await page.click('button[aria-label="Add recurring"]')
+    await page.click('button[aria-label="Add"]')
     await page.fill('input[placeholder="Name"]', 'Netflix')
     await page.fill('input[placeholder="Amount"]', '2500')
     await page.selectOption('select', { label: 'Expense' })
@@ -271,7 +269,7 @@ test.describe('Pocket Money smoke tests', () => {
     await createAccount(page, 'Commercial Bank', 50000)
     await page.click('button:has-text("More")')
     await page.getByRole('button', { name: /Recurring/ }).click()
-    await page.click('button[aria-label="Add recurring"]')
+    await page.click('button[aria-label="Add"]')
     await page.fill('input[placeholder="Name"]', 'Netflix')
     await page.fill('input[placeholder="Amount"]', '2500')
     await page.selectOption('select', { label: 'Expense' })

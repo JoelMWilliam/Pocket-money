@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, X, Trash2, TrendingDown, Calculator, ArrowRight } from 'lucide-react'
+import { X, Trash2, TrendingDown, Calculator, ArrowRight } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { RegisterModal } from './ModalRoot'
 import { formatLKR } from '../lib/utils'
@@ -44,7 +44,10 @@ function calculatePayoff(remaining, totalMonthly, strategy) {
   return { months: month, projection, interestPaid }
 }
 
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
 export default function Debts() {
+  useRegisterQuickAdd(() => openNew())
   const { debts, addDebt, updateDebt, deleteDebt } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -131,13 +134,6 @@ export default function Debts() {
           <p className="text-sm text-on-surface-variant">Payoff plan</p>
           <h1 className="text-2xl font-bold text-on-surface">Debts</h1>
         </div>
-        <button
-          onClick={openNew}
-          aria-label="Add debt"
-          className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
-        >
-          <Plus size={22} />
-        </button>
       </header>
 
       <section className="mb-5 rounded-3xl bg-surface p-5 border border-outline-variant">
@@ -151,11 +147,11 @@ export default function Debts() {
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-black/30 p-3">
+          <div className="rounded-2xl bg-surface-variant p-3">
             <p className="text-[10px] text-on-surface-variant">Min. Payments</p>
             <p className="text-sm font-semibold text-on-surface">{formatLKR(totalMinPayment)}/mo</p>
           </div>
-          <div className="rounded-2xl bg-black/30 p-3">
+          <div className="rounded-2xl bg-surface-variant p-3">
             <p className="text-[10px] text-on-surface-variant">Payoff Date</p>
             <p className="text-sm font-semibold text-on-surface">
               {payoffProjection.months < 120
@@ -179,7 +175,7 @@ export default function Debts() {
             value={extraPayment}
             onChange={(e) => setExtraPayment(e.target.value)}
             placeholder="0.00"
-            className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+            className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
           />
         </div>
 
@@ -193,7 +189,7 @@ export default function Debts() {
                 className={`rounded-xl border px-2 py-2 text-center text-xs font-medium ${
                   selectedStrategy === s.id
                     ? 'border-primary bg-primary-container text-primary'
-                    : 'border-outline-variant bg-black text-on-surface-variant'
+                    : 'border-outline-variant bg-surface text-on-surface-variant'
                 }`}
               >
                 <div>{s.name}</div>
@@ -245,7 +241,7 @@ export default function Debts() {
                 <span className="text-xs text-on-surface-variant">Paid {Math.round(100 - percent)}%</span>
                 <span className="text-xs text-on-surface-variant">{formatLKR(debt.principal)}</span>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-black">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{ width: `${100 - percent}%`, backgroundColor: debt.color }}
@@ -277,7 +273,7 @@ export default function Debts() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Debt name"
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
               />
               <div className="grid grid-cols-2 gap-3">
                 <input
@@ -287,7 +283,7 @@ export default function Debts() {
                   value={form.principal}
                   onChange={(e) => setForm({ ...form, principal: e.target.value })}
                   placeholder="Original amount"
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 />
                 <input
                   required
@@ -296,7 +292,7 @@ export default function Debts() {
                   value={form.balance}
                   onChange={(e) => setForm({ ...form, balance: e.target.value })}
                   placeholder="Current balance"
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -307,7 +303,7 @@ export default function Debts() {
                   value={form.interestRate}
                   onChange={(e) => setForm({ ...form, interestRate: e.target.value })}
                   placeholder="Interest rate %"
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 />
                 <input
                   required
@@ -316,13 +312,13 @@ export default function Debts() {
                   value={form.minimumPayment}
                   onChange={(e) => setForm({ ...form, minimumPayment: e.target.value })}
                   placeholder="Min payment"
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 />
               </div>
               <select
                 value={form.strategy}
                 onChange={(e) => setForm({ ...form, strategy: e.target.value })}
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
               >
                 {STRATEGIES.map((s) => (
                   <option key={s.id} value={s.id}>{s.name} — {s.desc}</option>

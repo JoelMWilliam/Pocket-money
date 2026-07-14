@@ -45,6 +45,8 @@ vi.mock('../src/lib/notifications', () => ({
   cancelAllNotifications: vi.fn(() => Promise.resolve()),
   scheduleDailyReminder: vi.fn(() => Promise.resolve(false)),
   requestNotificationPermission: vi.fn(() => Promise.resolve(false)),
+  scheduleBudgetAlert: vi.fn(() => Promise.resolve(false)),
+  cancelBudgetAlert: vi.fn(() => Promise.resolve()),
   idHash: vi.fn((s) => s.length)
 }))
 

@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import { Plus, X, Trash2 } from 'lucide-react'
+import { X, Trash2 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, getCurrentMonth } from '../lib/utils'
-import * as LucideIcons from 'lucide-react'
+import { getIcon } from '../lib/icons'
 
 import { RegisterModal } from './ModalRoot'
 
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
 export default function Budgets() {
+  useRegisterQuickAdd(() => openNew())
   const { budgets, categories, transactions, addBudget, updateBudget, deleteBudget, getBudgetProgress } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -50,19 +53,13 @@ export default function Budgets() {
           <p className="text-sm text-on-surface-variant">Monthly limits</p>
           <h1 className="text-2xl font-bold text-on-surface">Budgets</h1>
         </div>
-        <button
-          onClick={openNew}
-          className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
-        >
-          <Plus size={22} />
-        </button>
       </header>
 
       <section className="space-y-4">
         {budgets.map((budget) => {
           const category = categories.find((c) => c.id === budget.categoryId)
           const { spent, limit, rolloverAmount, percent } = getBudgetProgress(budget.id)
-          const Icon = category?.icon ? LucideIcons[category.icon] : LucideIcons.CircleDollarSign
+          const Icon = category?.icon ? getIcon(category.icon) : getIcon('CircleDollarSign')
           const statusColor = percent >= 100 ? 'bg-error' : percent >= 75 ? 'bg-amber-400' : 'bg-primary'
 
           return (
@@ -91,7 +88,7 @@ export default function Budgets() {
                 </div>
                 <span className="text-sm font-semibold text-on-surface">{Math.round(percent)}%</span>
               </div>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-black">
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface">
                 <div
                   className={`h-full rounded-full transition-all ${statusColor}`}
                   style={{ width: `${Math.min(percent, 100)}%` }}
@@ -137,7 +134,7 @@ export default function Budgets() {
                   <select
                     value={form.categoryId}
                     onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                   >
                     {categories
                       .filter((c) => c.type === 'expense')
@@ -155,12 +152,12 @@ export default function Budgets() {
                     step="0.01"
                     value={form.amount}
                     onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                     placeholder="0.00"
                   />
                 </div>
 
-                <label className="flex items-center gap-3 rounded-xl border border-outline-variant bg-black p-3">
+                <label className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface p-3">
                   <input
                     type="checkbox"
                     checked={form.rollover}

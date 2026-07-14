@@ -23,11 +23,15 @@ import Receipts from './components/Receipts'
 import QuickAddButton from './components/QuickAddButton'
 import AddTransaction from './components/AddTransaction'
 
+import Categories from './components/Categories'
 import Templates from './components/Templates'
 import Rules from './components/Rules'
 import ImportCSV from './components/ImportCSV'
 import AdvancedReports from './components/AdvancedReports'
 import CashFlow from './components/CashFlow'
+import Assistant from './components/Assistant'
+import { maybeAutoImportSms } from './lib/sms'
+import { isGoogleDriveConfigured, initializeGoogleAuth } from './lib/googleDrive'
 
 const SCREENS = {
   dashboard: Dashboard,
@@ -47,6 +51,8 @@ const SCREENS = {
   templates: Templates,
   rules: Rules,
   import: ImportCSV,
+  categories: Categories,
+  assistant: Assistant,
   settings: Settings
 }
 
@@ -67,6 +73,15 @@ export default function App() {
 
   useEffect(() => {
     registerActivityListeners()
+  }, [])
+
+  useEffect(() => {
+    if (isGoogleDriveConfigured()) {
+      initializeGoogleAuth().catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('Google auth init failed:', err)
+      })
+    }
   }, [])
 
   // Track rehydration so we don't flash onboarding while the store loads.
@@ -94,6 +109,13 @@ export default function App() {
   }, [screen])
 
   useTheme(seedColor, isDark)
+
+  // Reset exit confirmation when leaving the dashboard.
+  useEffect(() => {
+    if (screen !== HOME_SCREEN && exitConfirm) {
+      setExitConfirm(false)
+    }
+  }, [screen, exitConfirm])
 
   // Android back-button / gesture handling.
   useEffect(() => {
@@ -153,9 +175,10 @@ export default function App() {
     CapApp.addListener('pause', async () => {
       try {
         await persistUserData()
+        await useAppStore.getState().maybeAutoBackupToGoogleDrive()
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.error('Pause flush failed', e)
+        console.error('Pause flush/backup failed', e)
       }
     }).then((listener) => {
       removePause = listener
@@ -165,9 +188,36 @@ export default function App() {
     }
   }, [persistUserData])
 
+  // Auto-import bank SMS when the app comes to the foreground.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    let removeResume = null
+
+    const runAutoImport = async () => {
+      try {
+        const state = useAppStore.getState()
+        if (!state.auth.currentUser) return
+        await maybeAutoImportSms(state)
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Auto SMS import failed', e)
+      }
+    }
+
+    CapApp.addListener('resume', runAutoImport).then((listener) => {
+      removeResume = listener
+    })
+
+    runAutoImport()
+
+    return () => {
+      if (removeResume) removeResume.remove()
+    }
+  }, [])
+
   if (!rehydrated) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center bg-black">
+      <div className="flex h-[100dvh] items-center justify-center bg-surface">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
@@ -176,7 +226,7 @@ export default function App() {
   // Auth flow
   if (!currentUser) {
     if (users.length === 0) {
-      return <Onboarding />
+      return <Onboarding onComplete={() => setRehydrated(true)} />
     }
     return <AuthScreen />
   }
@@ -186,14 +236,13 @@ export default function App() {
   }
 
   const ScreenComponent = SCREENS[screen]
-  const showQuickAdd = ['dashboard', 'accounts', 'transactions', 'budgets', 'goals', 'analytics', 'cashflow', 'networth', 'debts', 'recurring', 'investments', 'loans', 'receipts'].includes(screen)
 
   return (
-    <div className="relative flex h-[100dvh] flex-col bg-black">
+    <div className="relative flex h-[100dvh] flex-col bg-surface">
       <div className="scroll-container flex-1 no-scrollbar safe-top pb-28" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
-        <ScreenComponent setScreen={setScreen} />
+        <ScreenComponent setScreen={setScreen} onAddTransaction={() => setQuickAddOpen(true)} />
       </div>
-      {showQuickAdd && <QuickAddButton onClick={() => setQuickAddOpen(true)} />}
+      <QuickAddButton />
       <BottomNav current={screen} onChange={setScreen} />
       {quickAddOpen && <AddTransaction onClose={() => setQuickAddOpen(false)} />}
       {exitConfirm && (

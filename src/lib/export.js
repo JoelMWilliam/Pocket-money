@@ -1,27 +1,19 @@
 import { encryptData, decryptData } from './crypto'
 import { inlineReceipts } from './receipts'
+import { downloadOrShare } from './share'
+import { escapeHtml } from './sanitize'
 
 export async function exportToJSON(data) {
   const withReceipts = await inlineReceipts(data)
   const blob = new Blob([JSON.stringify(withReceipts, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `pocket-money-backup-${new Date().toISOString().slice(0, 10)}.json`
-  a.click()
-  URL.revokeObjectURL(url)
+  await downloadOrShare(blob, `pocket-money-backup-${new Date().toISOString().slice(0, 10)}.json`, 'Pocket Money Backup')
 }
 
 export async function exportEncryptedBackup(data, passphrase) {
   const withReceipts = await inlineReceipts(data)
   const encrypted = await encryptData(withReceipts, passphrase)
   const blob = new Blob([JSON.stringify(encrypted, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `pocket-money-encrypted-${new Date().toISOString().slice(0, 10)}.json`
-  a.click()
-  URL.revokeObjectURL(url)
+  await downloadOrShare(blob, `pocket-money-encrypted-${new Date().toISOString().slice(0, 10)}.json`, 'Pocket Money Encrypted Backup')
 }
 
 export async function readEncryptedBackupFile(file, passphrase) {
@@ -29,7 +21,14 @@ export async function readEncryptedBackupFile(file, passphrase) {
   return decryptData(data, passphrase)
 }
 
-export function exportTransactionsToCSV(transactions, accounts, categories) {
+function sanitizeCsvCell(value) {
+  const s = String(value)
+  // Prevent CSV formula injection when opened in spreadsheet apps.
+  if (/^[\+\-=\t\r\@\s]/.test(s)) return `'${s}`
+  return s
+}
+
+export async function exportTransactionsToCSV(transactions, accounts, categories) {
   const headers = ['Date', 'Type', 'Amount', 'Account', 'Category', 'Note', 'Tags']
   const rows = transactions.map((t) => {
     const account = accounts.find((a) => a.id === t.accountId)?.name || ''
@@ -38,16 +37,11 @@ export function exportTransactionsToCSV(transactions, accounts, categories) {
   })
 
   const csv = [headers, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '\\"')}"`).join(','))
+    .map((row) => row.map((cell) => `"${sanitizeCsvCell(cell).replace(/"/g, '""')}"`).join(','))
     .join('\n')
 
   const blob = new Blob([csv], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `pocket-money-transactions-${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  await downloadOrShare(blob, `pocket-money-transactions-${new Date().toISOString().slice(0, 10)}.csv`, 'Pocket Money Transactions')
 }
 
 export function readJSONFile(file) {
@@ -65,12 +59,60 @@ export function readJSONFile(file) {
   })
 }
 
+export function validateBackupData(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Invalid backup: not an object')
+  }
+  const allowedKeys = new Set([
+    'settings', 'accounts', 'categories', 'transactions', 'budgets', 'goals', 'debts',
+    'recurring', 'investments', 'loans', 'templates', 'rules'
+  ])
+  for (const key of Object.keys(data)) {
+    if (!allowedKeys.has(key)) {
+      throw new Error(`Invalid backup: unknown key "${key}"`)
+    }
+  }
+  for (const key of ['accounts', 'categories', 'transactions', 'budgets', 'goals', 'debts', 'recurring', 'investments', 'loans', 'templates', 'rules']) {
+    const value = data[key]
+    if (value !== undefined && !Array.isArray(value)) {
+      throw new Error(`Invalid backup: ${key} must be an array`)
+    }
+  }
+  if (data.settings !== undefined && typeof data.settings !== 'object') {
+    throw new Error('Invalid backup: settings must be an object')
+  }
+  const size = JSON.stringify(data).length
+  if (size > 50 * 1024 * 1024) {
+    throw new Error('Invalid backup: file too large')
+  }
+  return true
+}
+
+export function sanitizeImportedSettings(settings, currentSettings = {}) {
+  const sensitive = new Set([
+    'googleDriveBackupEnabled',
+    'googleDriveBackupEmail',
+    'googleDriveBackupLastAt',
+    'googleDriveBackupInterval',
+    'smsImportedIds',
+    'smsLastImportedAt',
+    'smsAutoImportEnabled',
+    'notificationsEnabled',
+    'lastBudgetMonth'
+  ])
+  const merged = { ...settings }
+  for (const key of sensitive) {
+    if (key in currentSettings) merged[key] = currentSettings[key]
+  }
+  return merged
+}
+
 export function printReport(title, contentHtml) {
   const printWindow = window.open('', '_blank')
   printWindow.document.write(`
     <html>
       <head>
-        <title>${title}</title>
+        <title>${escapeHtml(title)}</title>
         <style>
           body { font-family: system-ui, sans-serif; color: #000; background: #fff; padding: 40px; }
           h1 { font-size: 24px; margin-bottom: 8px; }

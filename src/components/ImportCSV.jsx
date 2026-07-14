@@ -1,42 +1,13 @@
 import { useState } from 'react'
 import { Upload, FileSpreadsheet, X, Check, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
-import { generateId, todayInputDate } from '../lib/utils'
-
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim())
-  if (lines.length < 2) return []
-  const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, '').toLowerCase())
-  return lines.slice(1).map((line) => {
-    const values = []
-    let current = ''
-    let inQuotes = false
-    for (const char of line) {
-      if (char === '"') {
-        inQuotes = !inQuotes
-      } else if (char === ',' && !inQuotes) {
-        values.push(current.trim().replace(/^"|"$/g, ''))
-        current = ''
-      } else {
-        current += char
-      }
-    }
-    values.push(current.trim().replace(/^"|"$/g, ''))
-    return headers.reduce((obj, header, i) => {
-      obj[header] = values[i] || ''
-      return obj
-    }, {})
-  })
-}
-
-function isValidDate(d) {
-  return d && !isNaN(new Date(d).getTime())
-}
+import { parseCSV, isValidDate, detectType, findOrCreateCategory, importCSVRows } from '../lib/importCSV'
 
 export default function ImportCSV() {
-  const { accounts, categories, addTransaction, addCategory } = useAppStore()
+  const { accounts } = useAppStore()
   const [rows, setRows] = useState([])
   const [preview, setPreview] = useState([])
+  const [importAccountId, setImportAccountId] = useState(accounts[0]?.id || '')
   const [mapping, setMapping] = useState({
     date: 'date',
     amount: 'amount',
@@ -61,21 +32,6 @@ export default function ImportCSV() {
     reader.readAsText(file)
   }
 
-  const detectType = (row) => {
-    const type = (row[mapping.type] || '').toLowerCase()
-    if (type.includes('income') || type.includes('credit')) return 'income'
-    if (type.includes('transfer')) return 'transfer'
-    return 'expense'
-  }
-
-  const findOrCreateCategory = (name, type) => {
-    const clean = (name || '').trim()
-    if (!clean) return categories.find((c) => c.type === type)?.id
-    const existing = categories.find((c) => c.name.toLowerCase() === clean.toLowerCase())
-    if (existing) return existing.id
-    return null
-  }
-
   const analyzeQuality = (allRows) => {
     let valid = 0
     let invalidDate = 0
@@ -84,9 +40,10 @@ export default function ImportCSV() {
     let missingNote = 0
 
     allRows.forEach((row) => {
+      const type = detectType(row, mapping)
       const amount = Math.abs(Number(row[mapping.amount].replace(/[^0-9.-]/g, '')))
       const dateValid = isValidDate(row[mapping.date])
-      const category = findOrCreateCategory(row[mapping.category], detectType(row))
+      const category = findOrCreateCategory(row[mapping.category], type, useAppStore.getState().categories)
       const note = (row[mapping.note] || row[mapping.category] || '').trim()
 
       if (!dateValid) invalidDate++
@@ -102,45 +59,10 @@ export default function ImportCSV() {
     setQuality({ score, valid, invalidDate, zeroAmount, missingCategory, missingNote, total: allRows.length })
   }
 
-  const findAccount = () => {
-    return accounts[0]?.id || ''
-  }
+  const findAccount = () => importAccountId || accounts[0]?.id || ''
 
   const handleImport = () => {
-    let count = 0
-    let skip = 0
-    rows.forEach((row) => {
-      const type = detectType(row)
-      const amount = Math.abs(Number(row[mapping.amount].replace(/[^0-9.-]/g, '')))
-      const dateValue = row[mapping.date]
-      const dateValid = isValidDate(dateValue)
-      if (!amount || !dateValid) {
-        skip++
-        return
-      }
-      const date = new Date(dateValue).toISOString().slice(0, 10)
-      let categoryId = findOrCreateCategory(row[mapping.category], type)
-      if (!categoryId) {
-        const newCat = {
-          name: (row[mapping.category] || 'Imported').trim() || 'Imported',
-          type,
-          icon: type === 'income' ? 'Banknote' : 'Tag',
-          color: '#8E8E93'
-        }
-        categoryId = generateId()
-        addCategory({ ...newCat, id: categoryId })
-      }
-      addTransaction({
-        type,
-        amount,
-        accountId: findAccount(),
-        categoryId,
-        date,
-        note: row[mapping.note] || row[mapping.category] || 'Imported',
-        tags: ['csv-import']
-      })
-      count++
-    })
+    const { count, skip } = importCSVRows(rows, mapping, importAccountId)
     setImported(count)
     setSkipped(skip)
     setRows([])
@@ -154,6 +76,7 @@ export default function ImportCSV() {
     setQuality(null)
     setImported(0)
     setSkipped(0)
+    setImportAccountId(accounts[0]?.id || '')
   }
 
   return (
@@ -174,7 +97,7 @@ export default function ImportCSV() {
 
       <section className="mb-5 rounded-2xl bg-surface p-4 border border-outline-variant">
         {rows.length === 0 ? (
-          <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-outline-variant bg-black py-8">
+          <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-outline-variant bg-surface py-8">
             <Upload size={32} className="text-primary" />
             <div className="text-center">
               <p className="text-sm font-medium text-on-surface">Tap to upload CSV</p>
@@ -229,13 +152,26 @@ export default function ImportCSV() {
       {preview.length > 0 && (
         <section className="mb-24">
           <h2 className="mb-3 text-lg font-semibold text-on-surface">Preview</h2>
+          <div className="mb-4">
+            <label className="mb-1 block text-xs font-medium text-on-surface-variant">Import into account</label>
+            <select
+              value={importAccountId}
+              onChange={(e) => setImportAccountId(e.target.value)}
+              className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-2.5 text-sm text-on-surface"
+            >
+              <option value="">Select account</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </div>
           <div className="space-y-2">
             {preview.map((row, idx) => (
               <div key={idx} className="rounded-xl bg-surface p-3 border border-outline-variant">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-on-surface-variant">{row[mapping.date]}</span>
-                  <span className={`text-sm font-semibold ${detectType(row) === 'income' ? 'text-primary' : 'text-on-surface'}`}>
-                    {detectType(row) === 'income' ? '+' : '-'}{row[mapping.amount]}
+                  <span className={`text-sm font-semibold ${detectType(row, mapping) === 'income' ? 'text-primary' : 'text-on-surface'}`}>
+                    {detectType(row, mapping) === 'income' ? '+' : '-'}{row[mapping.amount]}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-on-surface truncate">{row[mapping.note] || row[mapping.category]}</p>
@@ -244,7 +180,8 @@ export default function ImportCSV() {
           </div>
           <button
             onClick={handleImport}
-            className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-base font-semibold text-on-primary"
+            disabled={!importAccountId}
+            className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-base font-semibold text-on-primary disabled:opacity-40"
           >
             Import {rows.length} Transactions
           </button>

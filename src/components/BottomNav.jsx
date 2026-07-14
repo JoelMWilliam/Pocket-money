@@ -18,7 +18,7 @@ export default function BottomNav({ current, onChange }) {
   const hideNav = modalCount > 0
   const [moreOpen, setMoreOpen] = useState(false)
   const [smsOpen, setSmsOpen] = useState(false)
-  const isMoreOpen = ['analytics', 'advancedreports', 'debts', 'recurring', 'networth', 'investments', 'loans', 'receipts', 'templates', 'rules', 'import', 'settings'].includes(current)
+  const isMoreOpen = ['analytics', 'advancedreports', 'debts', 'recurring', 'networth', 'investments', 'loans', 'receipts', 'templates', 'rules', 'categories', 'import', 'assistant', 'settings'].includes(current)
 
   const handleMoreAction = (id) => {
     if (id === 'sms') {
@@ -28,7 +28,7 @@ export default function BottomNav({ current, onChange }) {
 
   return (
     <>
-      <nav className={`relative z-40 border-t border-outline-variant bg-black/90 backdrop-blur-md safe-bottom transition-opacity ${hideNav ? 'opacity-0 pointer-events-none' : ''}`}>
+      <nav className={`relative z-40 border-t border-outline-variant bg-surface/95 backdrop-blur-md safe-bottom transition-opacity ${hideNav ? 'opacity-0 pointer-events-none' : ''}`}>
         <div className="mx-auto flex max-w-md items-center justify-around px-2 pb-safe">
           {ITEMS.map((item) => {
             const Icon = item.icon

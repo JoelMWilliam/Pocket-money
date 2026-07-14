@@ -14,14 +14,16 @@ import {
   LogOut,
   Shield,
   FileLock,
-  Printer,
   Share2,
   Cloud,
   ArrowUp,
   ArrowDown,
   HeartPulse,
   Fingerprint,
-  Bell
+  Bell,
+  FileText,
+  Mail,
+  MessageSquare
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { PRESET_COLORS } from '../lib/theme'
@@ -31,14 +33,20 @@ import {
   readJSONFile,
   exportEncryptedBackup,
   readEncryptedBackupFile,
-  printReport
+  validateBackupData,
+  sanitizeImportedSettings
 } from '../lib/export'
-import { extractReceipts, inlineReceipts } from '../lib/receipts'
-import { shareFile } from '../lib/share'
+import { extractReceipts } from '../lib/receipts'
 import { cloudAuth } from '../lib/api'
+import { exportPDFReport } from '../lib/pdf'
+import { buildEmailReport, sendEmailReport } from '../lib/email'
 import { canUseBiometrics } from '../lib/biometric'
 import { requestNotificationPermission, scheduleDailyReminder, cancelAllNotifications } from '../lib/notifications'
+import { maybeAutoImportSms } from '../lib/sms'
 import { RegisterModal } from './ModalRoot'
+import AvatarPicker from './AvatarPicker'
+import GoogleDriveBackup from './GoogleDriveBackup'
+import SmsParser from './SmsParser'
 
 export default function Settings() {
   const {
@@ -60,6 +68,7 @@ export default function Settings() {
     logout,
     deleteUser,
     saveCurrentUserData,
+    updateUserSettings,
     cloudUser,
     cloudToken,
     lastSyncAt,
@@ -79,7 +88,8 @@ export default function Settings() {
   const [health, setHealth] = useState(null)
   const [bioAvailable, setBioAvailable] = useState(false)
   const [bioEnabling, setBioEnabling] = useState(false)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+
+  const notificationsEnabled = settings.notificationsEnabled || false
 
   useEffect(() => {
     canUseBiometrics().then(setBioAvailable)
@@ -100,16 +110,29 @@ export default function Settings() {
   const toggleDailyReminder = async () => {
     if (notificationsEnabled) {
       await cancelAllNotifications()
-      setNotificationsEnabled(false)
+      updateSettings({ notificationsEnabled: false })
     } else {
       const granted = await requestNotificationPermission()
       if (granted) {
         await scheduleDailyReminder(999999, 'Pocket Money', 'Log today\'s transactions before bed.', 20, 0)
-        setNotificationsEnabled(true)
+        updateSettings({ notificationsEnabled: true })
         alert('Daily reminder enabled at 8:00 PM.')
       } else {
         alert('Notification permission denied.')
       }
+    }
+  }
+
+  const handleToggleSmsAutoImport = () => {
+    updateSettings({ smsAutoImportEnabled: !settings.smsAutoImportEnabled })
+  }
+
+  const handleImportSmsNow = async () => {
+    try {
+      const imported = await maybeAutoImportSms(useAppStore.getState())
+      alert(imported.length > 0 ? `Imported ${imported.length} transaction(s).` : 'No new bank SMS found.')
+    } catch (err) {
+      alert(err.message || 'SMS import failed.')
     }
   }
 
@@ -126,27 +149,33 @@ export default function Settings() {
   const [passphrase, setPassphrase] = useState('')
   const [encFile, setEncFile] = useState(null)
   const [encError, setEncError] = useState('')
+  const [smsOpen, setSmsOpen] = useState(false)
 
   const handleImport = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     try {
       const data = await readJSONFile(file)
-      const withRefs = await extractReceipts(data)
+      validateBackupData(data)
+      const safeData = {
+        ...data,
+        settings: sanitizeImportedSettings(data.settings || {}, settings)
+      }
+      const withRefs = await extractReceipts(safeData)
       replaceState(withRefs)
       saveCurrentUserData()
       alert('Data imported successfully.')
     } catch (err) {
-      alert('Failed to import file. Make sure it is a valid Pocket Money backup.')
+      alert('Failed to import file. ' + err.message)
     }
   }
 
   const handleShareBackup = async () => {
-    const data = { settings, accounts, categories, transactions, budgets, goals, debts, recurring, investments, loans }
-    const withReceipts = await inlineReceipts(data)
-    const blob = new Blob([JSON.stringify(withReceipts, null, 2)], { type: 'application/json' })
-    const ok = await shareFile(blob, `pocket-money-backup-${new Date().toISOString().slice(0, 10)}.json`, 'Pocket Money Backup')
-    if (!ok) exportToJSON(data)
+    try {
+      await exportToJSON({ settings, accounts, categories, transactions, budgets, goals, debts, recurring, investments, loans })
+    } catch (err) {
+      alert('Share failed. ' + err.message)
+    }
   }
 
   const handleEncryptedExport = async (e) => {
@@ -171,7 +200,12 @@ export default function Settings() {
     if (!encFile) return setEncError('Select an encrypted backup file')
     try {
       const data = await readEncryptedBackupFile(encFile, passphrase)
-      const withRefs = await extractReceipts(data)
+      validateBackupData(data)
+      const safeData = {
+        ...data,
+        settings: sanitizeImportedSettings(data.settings || {}, settings)
+      }
+      const withRefs = await extractReceipts(safeData)
       replaceState(withRefs)
       saveCurrentUserData()
       alert('Encrypted backup imported successfully.')
@@ -240,49 +274,45 @@ export default function Settings() {
     }
   }
 
-  const handlePrintReport = () => {
-    const totalBalance = accounts.reduce((sum, a) => sum + (a.balance || 0), 0)
-    const income = transactions
-      .filter((t) => t.type === 'income')
-      .reduce((sum, t) => sum + (t.amount || 0), 0)
-    const expense = transactions
-      .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + (t.amount || 0), 0)
+  const handleExportPDF = async () => {
+    try {
+      await exportPDFReport({
+        settings,
+        accounts,
+        categories,
+        transactions,
+        budgets,
+        goals,
+        debts,
+        recurring,
+        investments,
+        loans
+      })
+    } catch (err) {
+      alert('Failed to export PDF. ' + err.message)
+    }
+  }
 
-    const contentHtml = `
-      <h1>Pocket Money Report</h1>
-      <p>Generated on ${new Date().toLocaleString()}</p>
-      <p><strong>Total Balance:</strong> LKR ${totalBalance.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-      <p><strong>Total Income:</strong> LKR ${income.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-      <p><strong>Total Expenses:</strong> LKR ${expense.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-
-      <h2>Accounts</h2>
-      <table>
-        <tr><th>Name</th><th>Type</th><th>Balance</th></tr>
-        ${accounts
-          .map(
-            (a) =>
-              `<tr><td>${a.name}</td><td>${a.type}</td><td>LKR ${(a.balance || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>`
-          )
-          .join('')}
-      </table>
-
-      <h2>Recent Transactions</h2>
-      <table>
-        <tr><th>Date</th><th>Type</th><th>Amount</th><th>Account</th><th>Category</th><th>Note</th></tr>
-        ${transactions
-          .slice()
-          .sort((a, b) => new Date(b.date) - new Date(a.date))
-          .slice(0, 100)
-          .map((t) => {
-            const account = accounts.find((a) => a.id === t.accountId)?.name || ''
-            const category = categories.find((c) => c.id === t.categoryId)?.name || ''
-            return `<tr><td>${t.date}</td><td>${t.type}</td><td>LKR ${(t.amount || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td>${account}</td><td>${category}</td><td>${t.note || ''}</td></tr>`
-          })
-          .join('')}
-      </table>
-    `
-    printReport('Pocket Money Report', contentHtml)
+  const handleEmailReport = async () => {
+    try {
+      const data = {
+        settings,
+        accounts,
+        categories,
+        transactions,
+        budgets,
+        goals,
+        debts,
+        recurring,
+        investments,
+        loans
+      }
+      const { subject, html, text } = buildEmailReport(data)
+      const ok = await sendEmailReport({ subject, html, text })
+      if (!ok) alert('No email app available.')
+    } catch (err) {
+      alert('Failed to prepare email. ' + err.message)
+    }
   }
 
   const handleReset = () => {
@@ -331,6 +361,16 @@ export default function Settings() {
         <p className="text-sm text-on-surface-variant">Preferences</p>
         <h1 className="text-2xl font-bold text-on-surface">Settings</h1>
       </header>
+
+      <section className="mb-5 rounded-2xl bg-surface p-4 text-center border border-outline-variant">
+        <AvatarPicker
+          value={auth.users[auth.currentUser]?.avatar}
+          onChange={(avatar) => updateUserSettings(auth.currentUser, { avatar })}
+          size={96}
+        />
+        <h2 className="mt-3 text-lg font-bold text-on-surface">{auth.currentUser}</h2>
+        <p className="text-xs text-on-surface-variant">Tap avatar to change</p>
+      </section>
 
       <section className="mb-5 rounded-2xl bg-surface p-2 border border-outline-variant">
         <button
@@ -511,7 +551,7 @@ export default function Settings() {
         <div className="my-1 h-px bg-outline-variant" />
 
         <button
-          onClick={() => exportToJSON({ settings, accounts, categories, transactions, budgets, goals, debts, recurring, investments, loans })}
+          onClick={() => exportToJSON({ settings, accounts, categories, transactions, budgets, goals, debts, recurring, investments, loans }).catch((err) => alert('Export failed. ' + err.message))}
           className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
         >
           <div className="flex items-center gap-3">
@@ -547,7 +587,7 @@ export default function Settings() {
         <div className="my-1 h-px bg-outline-variant" />
 
         <button
-          onClick={() => exportTransactionsToCSV(transactions, accounts, categories)}
+          onClick={() => exportTransactionsToCSV(transactions, accounts, categories).catch((err) => alert('CSV export failed. ' + err.message))}
           className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
         >
           <div className="flex items-center gap-3">
@@ -587,6 +627,82 @@ export default function Settings() {
           className="hidden"
         />
       </section>
+
+      <section className="mb-5 rounded-2xl bg-surface p-2 border border-outline-variant">
+        <button
+          onClick={handleExportPDF}
+          className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary-container p-2 text-primary">
+              <FileText size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-on-surface">Export PDF Report</p>
+              <p className="text-xs text-on-surface-variant">Download a formatted PDF summary</p>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-on-surface-variant" />
+        </button>
+
+        <div className="my-1 h-px bg-outline-variant" />
+
+        <button
+          onClick={handleEmailReport}
+          className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary-container p-2 text-primary">
+              <Mail size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-on-surface">Email Monthly Report</p>
+              <p className="text-xs text-on-surface-variant">Send a summary via your email app</p>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-on-surface-variant" />
+        </button>
+      </section>
+
+      <section className="mb-5 rounded-2xl bg-surface p-2 border border-outline-variant">
+        <button
+          onClick={() => setSmsOpen(true)}
+          className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary-container p-2 text-primary">
+              <MessageSquare size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-on-surface">Import SMS</p>
+              <p className="text-xs text-on-surface-variant">Manually import bank transactions from SMS</p>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-on-surface-variant" />
+        </button>
+
+        <div className="my-1 h-px bg-outline-variant" />
+
+        <div className="flex items-center justify-between rounded-xl p-3">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary-container p-2 text-primary">
+              <RefreshCcw size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-on-surface">Auto-import SMS</p>
+              <p className="text-xs text-on-surface-variant">Import new bank SMS on app launch</p>
+            </div>
+          </div>
+          <button
+            onClick={handleToggleSmsAutoImport}
+            className={`relative h-7 w-12 rounded-full transition-colors ${settings.smsAutoImportEnabled ? 'bg-primary' : 'bg-surface-variant'}`}
+          >
+            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${settings.smsAutoImportEnabled ? 'left-6' : 'left-1'}`} />
+          </button>
+        </div>
+      </section>
+
+      <GoogleDriveBackup />
 
       <section className="mb-5 rounded-2xl bg-surface p-2 border border-outline-variant">
         <button
@@ -637,24 +753,6 @@ export default function Settings() {
           }}
           className="hidden"
         />
-
-        <div className="my-1 h-px bg-outline-variant" />
-
-        <button
-          onClick={handlePrintReport}
-          className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
-        >
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-primary-container p-2 text-primary">
-              <Printer size={18} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-on-surface">Print / Save PDF Report</p>
-              <p className="text-xs text-on-surface-variant">Open a printable summary</p>
-            </div>
-          </div>
-          <ChevronRight size={16} className="text-on-surface-variant" />
-        </button>
       </section>
 
       <section className="mb-5 rounded-2xl bg-surface p-2 border border-outline-variant">
@@ -779,7 +877,7 @@ export default function Settings() {
                   className={`flex flex-col items-center gap-2 rounded-2xl border p-3 transition-colors ${
                     settings.seedColor === c.value
                       ? 'border-primary bg-primary-container'
-                      : 'border-outline-variant bg-black'
+                      : 'border-outline-variant bg-surface'
                   }`}
                 >
                   <div
@@ -804,7 +902,7 @@ export default function Settings() {
                   type="text"
                   value={settings.seedColor}
                   onChange={(e) => updateSettings({ seedColor: e.target.value })}
-                  className="flex-1 rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface uppercase"
+                  className="flex-1 rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface uppercase"
                 />
               </div>
             </div>
@@ -851,7 +949,7 @@ export default function Settings() {
                 value={pinForm.current}
                 onChange={(e) => setPinForm({ ...pinForm, current: e.target.value.replace(/\D/g, '').slice(0, 8) })}
                 placeholder="Current PIN"
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-center text-xl tracking-widest text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-center text-xl tracking-widest text-on-surface"
               />
               <input
                 type="password"
@@ -861,7 +959,7 @@ export default function Settings() {
                 value={pinForm.newPin}
                 onChange={(e) => setPinForm({ ...pinForm, newPin: e.target.value.replace(/\D/g, '').slice(0, 8) })}
                 placeholder="New PIN"
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-center text-xl tracking-widest text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-center text-xl tracking-widest text-on-surface"
               />
               <input
                 type="password"
@@ -871,7 +969,7 @@ export default function Settings() {
                 value={pinForm.confirm}
                 onChange={(e) => setPinForm({ ...pinForm, confirm: e.target.value.replace(/\D/g, '').slice(0, 8) })}
                 placeholder="Confirm new PIN"
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-center text-xl tracking-widest text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-center text-xl tracking-widest text-on-surface"
               />
 
               {pinError && <p className="text-center text-sm text-error">{pinError}</p>}
@@ -907,7 +1005,7 @@ export default function Settings() {
               {Object.keys(auth.users).map((username) => (
                 <div
                   key={username}
-                  className="flex items-center justify-between rounded-2xl bg-black p-4"
+                  className="flex items-center justify-between rounded-2xl bg-surface p-4"
                 >
                   <div className="flex items-center gap-3">
                     <div className="rounded-full bg-primary-container p-2 text-primary">
@@ -979,7 +1077,7 @@ export default function Settings() {
               onChange={(e) => setPassphrase(e.target.value)}
               placeholder="Passphrase (min 6 characters)"
               minLength={6}
-              className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+              className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
             />
 
             {encError && <p className="mt-3 text-center text-sm text-error">{encError}</p>}
@@ -1023,7 +1121,7 @@ export default function Settings() {
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
               placeholder="Passphrase"
-              className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+              className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
             />
 
             {encError && <p className="mt-3 text-center text-sm text-error">{encError}</p>}
@@ -1056,7 +1154,7 @@ export default function Settings() {
 
             {cloudUser ? (
               <div className="space-y-4">
-                <div className="rounded-xl bg-black p-4">
+                <div className="rounded-xl bg-surface p-4">
                   <p className="text-xs text-on-surface-variant">Connected account</p>
                   <p className="text-sm font-semibold text-on-surface">{cloudUser}</p>
                   {lastSyncAt && <p className="mt-1 text-xs text-on-surface-variant">Last sync: {new Date(lastSyncAt).toLocaleString()}</p>}
@@ -1098,14 +1196,14 @@ export default function Settings() {
                   <button
                     type="button"
                     onClick={() => setCloudForm({ ...cloudForm, mode: 'login' })}
-                    className={`rounded-xl py-2 text-sm font-medium ${cloudForm.mode === 'login' ? 'bg-primary text-on-primary' : 'bg-black text-on-surface'}`}
+                    className={`rounded-xl py-2 text-sm font-medium ${cloudForm.mode === 'login' ? 'bg-primary text-on-primary' : 'bg-surface text-on-surface'}`}
                   >
                     Log In
                   </button>
                   <button
                     type="button"
                     onClick={() => setCloudForm({ ...cloudForm, mode: 'register' })}
-                    className={`rounded-xl py-2 text-sm font-medium ${cloudForm.mode === 'register' ? 'bg-primary text-on-primary' : 'bg-black text-on-surface'}`}
+                    className={`rounded-xl py-2 text-sm font-medium ${cloudForm.mode === 'register' ? 'bg-primary text-on-primary' : 'bg-surface text-on-surface'}`}
                   >
                     Register
                   </button>
@@ -1116,7 +1214,7 @@ export default function Settings() {
                   value={cloudForm.username}
                   onChange={(e) => setCloudForm({ ...cloudForm, username: e.target.value })}
                   placeholder="Username"
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                 />
                 <input
                   required
@@ -1125,7 +1223,7 @@ export default function Settings() {
                   onChange={(e) => setCloudForm({ ...cloudForm, password: e.target.value })}
                   placeholder="Password"
                   minLength={8}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                 />
 
                 {cloudError && <p className="text-center text-sm text-error">{cloudError}</p>}
@@ -1143,6 +1241,8 @@ export default function Settings() {
           </div>
         </>
       )}
+
+      {smsOpen && <SmsParser onClose={() => setSmsOpen(false)} />}
     </div>
   )
 }

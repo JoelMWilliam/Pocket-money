@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { TrendingUp, Wallet, CreditCard, Landmark, Gem, Home, Car } from 'lucide-react'
+import { TrendingUp, Wallet, CreditCard, Landmark, Gem, Home, Car, ArrowRightLeft } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR } from '../lib/utils'
-import * as LucideIcons from 'lucide-react'
+import { getIcon } from '../lib/icons'
 
 const ASSET_ICONS = {
   cash: Wallet,
@@ -71,11 +71,11 @@ export default function NetWorth() {
           {formatLKR(netWorth)}
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-black/30 p-3">
+          <div className="rounded-2xl bg-surface-variant p-3">
             <p className="text-[10px] text-on-surface-variant">Assets</p>
             <p className="text-sm font-semibold text-on-surface">{formatLKR(totalAssets)}</p>
           </div>
-          <div className="rounded-2xl bg-black/30 p-3">
+          <div className="rounded-2xl bg-surface-variant p-3">
             <p className="text-[10px] text-on-surface-variant">Liabilities</p>
             <p className="text-sm font-semibold text-on-surface">{formatLKR(totalLiabilities)}</p>
           </div>
@@ -128,7 +128,7 @@ export default function NetWorth() {
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs ${
                   selectedType === assetsByType[idx]?.type
                     ? 'bg-primary-container text-primary'
-                    : 'bg-black text-on-surface-variant'
+                    : 'bg-surface text-on-surface-variant'
                 }`}
               >
                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
@@ -149,7 +149,7 @@ export default function NetWorth() {
         <div className="space-y-3">
           {selectedType === 'investment' && investments.map((inv) => {
             const value = (inv.currentPrice || 0) * (inv.units || 1)
-            const Icon = LucideIcons.TrendingUp
+            const Icon = TrendingUp
             return (
               <div key={inv.id} className="flex items-center justify-between rounded-2xl bg-surface p-4 border border-outline-variant">
                 <div className="flex items-center gap-3">
@@ -167,7 +167,7 @@ export default function NetWorth() {
           })}
           {selectedType === 'loans' && loans.filter((l) => l.type === 'lent').map((loan) => {
             const value = loan.amount - (loan.repaid || 0)
-            const Icon = LucideIcons.ArrowRightLeft
+            const Icon = ArrowRightLeft
             return (
               <div key={loan.id} className="flex items-center justify-between rounded-2xl bg-surface p-4 border border-outline-variant">
                 <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ export default function NetWorth() {
             )
           })}
           {displayedAccounts.filter((a) => selectedType !== 'investment' && selectedType !== 'loans').map((account) => {
-            const Icon = LucideIcons[account.icon] || Wallet
+            const Icon = getIcon(account.icon, Wallet)
             return (
               <div
                 key={account.id}

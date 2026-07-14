@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, SlidersHorizontal, X, Trash2, Tags, CheckSquare, Square, Check } from 'lucide-react'
+import { Search, SlidersHorizontal, X, Trash2, Tags, CheckSquare, Square, Check } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { RegisterModal } from './ModalRoot'
 import TransactionItem from './TransactionItem'
@@ -8,7 +8,10 @@ import TagInput from './TagInput'
 
 const FILTERS = ['all', 'income', 'expense', 'transfer']
 
-export default function Transactions() {
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
+export default function Transactions({ onAddTransaction }) {
+  useRegisterQuickAdd(onAddTransaction)
   const { transactions, categories, accounts, bulkDeleteTransactions, bulkUpdateTransactions } = useAppStore()
   const [showAdd, setShowAdd] = useState(false)
   const [search, setSearch] = useState('')
@@ -126,15 +129,6 @@ export default function Transactions() {
           >
             <CheckSquare size={20} />
           </button>
-          <button
-            onClick={() => {
-              setEditing(null)
-              setShowAdd(true)
-            }}
-            className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
-          >
-            <Plus size={22} />
-          </button>
         </div>
       </header>
 
@@ -185,7 +179,7 @@ export default function Transactions() {
               <select
                 value={bulkCategory}
                 onChange={(e) => setBulkCategory(e.target.value)}
-                className="w-full rounded-xl border border-outline-variant bg-black px-3 py-2 text-sm text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
               >
                 <option value="">Set category...</option>
                 {categories.map((c) => (
@@ -267,7 +261,7 @@ export default function Transactions() {
                 <select
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                 >
                   {FILTERS.map((f) => (
                     <option key={f} value={f}>{f[0].toUpperCase() + f.slice(1)}</option>
@@ -282,7 +276,7 @@ export default function Transactions() {
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-3 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-3 py-3 text-sm text-on-surface"
                   />
                 </div>
                 <div>
@@ -291,7 +285,7 @@ export default function Transactions() {
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-3 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-3 py-3 text-sm text-on-surface"
                   />
                 </div>
               </div>
@@ -301,7 +295,7 @@ export default function Transactions() {
                 <select
                   value={accountFilter}
                   onChange={(e) => setAccountFilter(e.target.value)}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                 >
                   <option value="">All accounts</option>
                   {accounts.map((a) => (
@@ -315,7 +309,7 @@ export default function Transactions() {
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                 >
                   <option value="">All categories</option>
                   {categories.map((c) => (
@@ -333,7 +327,7 @@ export default function Transactions() {
                     value={minAmount}
                     onChange={(e) => setMinAmount(e.target.value)}
                     placeholder="0"
-                    className="w-full rounded-xl border border-outline-variant bg-black px-3 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-3 py-3 text-sm text-on-surface"
                   />
                 </div>
                 <div>
@@ -344,7 +338,7 @@ export default function Transactions() {
                     value={maxAmount}
                     onChange={(e) => setMaxAmount(e.target.value)}
                     placeholder="∞"
-                    className="w-full rounded-xl border border-outline-variant bg-black px-3 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-3 py-3 text-sm text-on-surface"
                   />
                 </div>
               </div>

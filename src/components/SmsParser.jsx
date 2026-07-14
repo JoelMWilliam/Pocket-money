@@ -1,127 +1,105 @@
 import { useState, useEffect } from 'react'
-import { X, MessageSquare, Bell, Plus, Check } from 'lucide-react'
-import { registerPlugin } from '@capacitor/core'
+import { Capacitor } from '@capacitor/core'
+import { X, MessageSquare, Bell, Plus, Check, RefreshCw, Eye, EyeOff } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR } from '../lib/utils'
-import { readNativeSms } from '../lib/biometric'
-
-const SmsReader = registerPlugin('SmsReader')
-
+import {
+  requestSmsPermission,
+  readSmsMessages,
+  importSmsMessages,
+  parseSmsTransaction,
+  isNativeSmsAvailable
+} from '../lib/sms'
 import { useRegisterModal } from '../contexts/ModalContext'
 
-const BANK_PATTERNS = [
-  {
-    bank: 'Commercial Bank',
-    regex: /(?:credited|debited|withdrawn|paid)\s+(?:Rs\.?|LKR|Rs:)\s*([\d,]+\.?\d*)/i,
-    amountRegex: /(?:Rs\.?|LKR|Rs:)\s*([\d,]+\.?\d*)/i,
-    noteRegex: /(?:at|from|to|for)\s+([A-Za-z0-9\s&'-]+)/i,
-    type: 'expense'
-  },
-  {
-    bank: 'HNB',
-    regex: /(?:spent|received|transferred)\s+LKR\s*([\d,]+\.?\d*)/i,
-    amountRegex: /LKR\s*([\d,]+\.?\d*)/i,
-    noteRegex: /(?:at|to)\s+([A-Za-z0-9\s&'-]+)/i,
-    type: 'expense'
-  },
-  {
-    bank: 'Sampath Bank',
-    regex: /(?:purchase|withdrawal|deposit)\s+of\s+Rs\.?\s*([\d,]+\.?\d*)/i,
-    amountRegex: /Rs\.?\s*([\d,]+\.?\d*)/i,
-    noteRegex: /(?:from|at|to)\s+([A-Za-z0-9\s&'-]+)/i,
-    type: 'expense'
-  }
-]
-
-export function parseSmsTransaction(body) {
-  const text = body.toLowerCase()
-  const isIncome = /credited|received|deposit|salary/.test(text)
-  const isTransfer = /transferred|transfer/.test(text)
-
-  for (const pattern of BANK_PATTERNS) {
-    if (!pattern.regex.test(body)) continue
-    const amountMatch = body.match(pattern.amountRegex)
-    if (!amountMatch) continue
-    const amount = Number(amountMatch[1].replace(/,/g, ''))
-    if (!amount || amount <= 0) continue
-
-    const noteMatch = body.match(pattern.noteRegex)
-    const note = noteMatch ? noteMatch[1].trim() : pattern.bank
-
-    const type = isIncome ? 'income' : isTransfer ? 'transfer' : 'expense'
-
-    return { amount, note, type, raw: body }
-  }
-
-  return null
-}
+export { parseSmsTransaction }
 
 export default function SmsParser({ onClose }) {
   useRegisterModal()
-  const { accounts, categories, addTransaction } = useAppStore()
+  const store = useAppStore()
+  const isNative = isNativeSmsAvailable()
   const [permission, setPermission] = useState('prompt')
+  const [rawMessages, setRawMessages] = useState([])
   const [messages, setMessages] = useState([])
   const [selected, setSelected] = useState([])
   const [importing, setImporting] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [showRaw, setShowRaw] = useState(false)
+  const [autoImportEnabled, setAutoImportEnabled] = useState(store.settings.smsAutoImportEnabled || false)
+  const [statusMsg, setStatusMsg] = useState('')
+  const [diagnostic, setDiagnostic] = useState('')
+  const [manualText, setManualText] = useState('')
+  const [manualParsed, setManualParsed] = useState(null)
 
   useEffect(() => {
-    async function load() {
-      try {
-        const perm = await SmsReader.checkPermission()
-        if (!perm.granted) {
-          const req = await SmsReader.requestPermission()
-          if (!req.granted) {
-            setPermission('denied')
-            return
-          }
-        }
-      } catch (err) {
-        console.error(err)
-      }
-
-      try {
-        const native = await readNativeSms()
-        if (native.length > 0) {
-          const parsed = native
-            .map((m) => ({
-              ...m,
-              date: typeof m.date === 'number' ? new Date(m.date).toISOString() : m.date,
-              parsed: parseSmsTransaction(m.body)
-            }))
-            .filter((m) => m.parsed)
-          setMessages(parsed)
-          return
-        }
-      } catch (err) {
-        console.error(err)
-      }
-
-      if (navigator.sms) {
-        navigator.sms.getMessages?.()
-          .then((msgs) => {
-            const parsed = msgs.map((m) => ({ ...m, parsed: parseSmsTransaction(m.body) })).filter((m) => m.parsed)
-            setMessages(parsed)
-          })
-          .catch(() => setPermission('denied'))
-      } else if (window.AndroidSmsReader) {
-        window.AndroidSmsReader.readMessages((msgs) => {
-          const parsed = msgs.map((m) => ({ ...m, parsed: parseSmsTransaction(m.body) })).filter((m) => m.parsed)
-          setMessages(parsed)
-        })
-      } else {
-        setPermission('manual')
-      }
+    if (isNative) {
+      loadNativeMessages()
+    } else {
+      setPermission('manual')
+      setDiagnostic('Manual mode: paste a bank SMS below.')
     }
-    load()
-  }, [])
+  }, [isNative])
+
+  const loadNativeMessages = async () => {
+    setLoading(true)
+    setStatusMsg('')
+    setDiagnostic('')
+    try {
+      const granted = await requestSmsPermission()
+      setPermission(granted ? 'granted' : 'denied')
+      if (!granted) {
+        setLoading(false)
+        setDiagnostic('SMS permission denied. Tap the refresh button after allowing it in Android Settings.')
+        return
+      }
+      const native = await readSmsMessages()
+      setRawMessages(native)
+
+      const parsed = native
+        .map((m) => ({
+          ...m,
+          date: typeof m.date === 'number' ? new Date(m.date).toISOString() : m.date,
+          parsed: parseSmsTransaction(m.body)
+        }))
+        .filter((m) => m.parsed)
+
+      setMessages(parsed)
+      setDiagnostic(`Read ${native.length} SMS messages. ${parsed.length} matched a bank transaction.`)
+
+      if (parsed.length === 0 && native.length > 0) {
+        setStatusMsg(`${native.length} messages read, but none matched a bank transaction pattern. Show raw messages to inspect them.`)
+      }
+      if (native.length === 0) {
+        setStatusMsg('No SMS messages found in the inbox.')
+      }
+    } catch (err) {
+      console.error(err)
+      setStatusMsg(`Error: ${err.message || 'Could not read SMS'}`)
+      setDiagnostic(`Error: ${err.message || 'Could not read SMS'}`)
+      setPermission('manual')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleManualPaste = (e) => {
     const text = e.target.value
-    if (!text) return
-    const parsed = parseSmsTransaction(text)
-    if (parsed) {
-      setMessages([{ id: 'manual', body: text, date: new Date().toISOString(), parsed }])
+    setManualText(text)
+    if (!text) {
+      setManualParsed(null)
+      return
     }
+    const parsed = parseSmsTransaction(text)
+    setManualParsed(parsed)
+    if (!parsed) {
+      setDiagnostic('No bank transaction pattern matched in the pasted text.')
+    }
+  }
+
+  const handleImportManual = () => {
+    if (!manualParsed) return
+    importSmsMessages([{ id: 'manual', body: manualText, date: new Date().toISOString(), parsed: manualParsed }], store)
+    onClose()
   }
 
   const toggleSelect = (id) => {
@@ -131,34 +109,23 @@ export default function SmsParser({ onClose }) {
   const handleImport = () => {
     setImporting(true)
     const toImport = messages.filter((m) => selected.includes(m.id))
-    const defaultAccount = accounts[0]?.id
-    const defaultCategory = categories.find((c) => c.type === 'expense')?.id
-
-    if (!defaultAccount || !defaultCategory) {
-      alert('Add at least one account and one expense category before importing.')
-      setImporting(false)
-      return
-    }
-
-    for (const m of toImport) {
-      addTransaction({
-        accountId: defaultAccount,
-        categoryId: defaultCategory,
-        amount: m.parsed.amount,
-        type: m.parsed.type,
-        date: m.date ? m.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
-        note: m.parsed.note,
-        tags: ['sms-import']
-      })
-    }
-
+    importSmsMessages(toImport, store)
     setImporting(false)
     onClose()
   }
 
+  const handleToggleAutoImport = async () => {
+    const next = !autoImportEnabled
+    setAutoImportEnabled(next)
+    store.updateSettings({ smsAutoImportEnabled: next })
+    if (next) {
+      await loadNativeMessages()
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
-      <div className="flex w-full max-w-md max-h-[85vh] flex-col animate-slide-up rounded-t-3xl bg-black border-t border-outline-variant">
+      <div className="flex w-full max-w-md max-h-[85vh] flex-col animate-slide-up rounded-t-3xl bg-surface border-t border-outline-variant">
         <div className="flex-none p-5 pb-2">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -173,35 +140,119 @@ export default function SmsParser({ onClose }) {
         </div>
 
         <div className="overflow-y-auto p-5 pt-2">
-          {permission === 'manual' && (
-            <div className="mb-4">
-              <p className="mb-2 text-xs text-on-surface-variant">Paste a bank SMS below to parse:</p>
-              <textarea
-                rows={3}
-                onChange={handleManualPaste}
-                className="w-full rounded-xl border border-outline-variant bg-surface p-3 text-sm text-on-surface"
-                placeholder="e.g. Your account has been debited LKR 1,500.00 at Cargills Food City"
-              />
+          {isNative && (
+            <div className="mb-4 rounded-2xl bg-surface p-4 border border-outline-variant">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-primary-container p-2 text-primary">
+                    <Bell size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-on-surface">Auto-import SMS</p>
+                    <p className="text-xs text-on-surface-variant">Add new bank SMS on app launch</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleToggleAutoImport}
+                  className={`relative h-7 w-12 rounded-full transition-colors ${autoImportEnabled ? 'bg-primary' : 'bg-surface-variant'}`}
+                >
+                  <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${autoImportEnabled ? 'left-6' : 'left-1'}`} />
+                </button>
+              </div>
             </div>
           )}
+
+          {diagnostic && (
+            <div className="mb-4 rounded-2xl bg-surface p-3 text-xs text-on-surface-variant border border-outline-variant">
+              {diagnostic}
+            </div>
+          )}
+
+          <div className="mb-4">
+            <p className="mb-2 text-xs text-on-surface-variant">Paste a bank SMS below to test the parser:</p>
+            <textarea
+              rows={3}
+              value={manualText}
+              onChange={handleManualPaste}
+              className="w-full rounded-xl border border-outline-variant bg-surface p-3 text-sm text-on-surface"
+              placeholder="e.g. Your account has been debited LKR 1,500.00 at Cargills Food City"
+            />
+            {manualParsed && (
+              <div className="mt-2 rounded-xl bg-primary-container p-3 text-sm text-on-surface">
+                <p className="font-medium">Parsed: {manualParsed.note}</p>
+                <p className="text-xs text-on-surface-variant">{formatLKR(manualParsed.amount)} · {manualParsed.type}</p>
+                <button
+                  onClick={handleImportManual}
+                  className="mt-2 w-full rounded-xl bg-primary py-2 text-xs font-semibold text-on-primary"
+                >
+                  Import this transaction
+                </button>
+              </div>
+            )}
+          </div>
 
           {permission === 'denied' && (
             <div className="mb-4 rounded-2xl bg-error/10 p-4 text-sm text-error">
               <p className="font-medium">SMS permission denied</p>
               <p className="mt-1 text-xs opacity-90">
                 Go to Android Settings → Apps → Pocket Money → Permissions → SMS → Allow.
-                On some phones you may also need to set Pocket Money as the default SMS app temporarily.
               </p>
             </div>
           )}
 
-          {messages.length === 0 ? (
+          {isNative && permission !== 'denied' && (
+            <button
+              onClick={loadNativeMessages}
+              disabled={loading}
+              className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-surface px-4 py-2.5 text-sm font-medium text-on-surface border border-outline-variant disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              {loading ? 'Reading SMS...' : 'Refresh SMS inbox'}
+            </button>
+          )}
+
+          {statusMsg && (
+            <div className="mb-4 rounded-2xl bg-amber-400/10 p-3 text-xs text-amber-400">
+              {statusMsg}
+            </div>
+          )}
+
+          {loading && (
+            <div className="py-8 text-center">
+              <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="text-sm text-on-surface-variant">Reading messages...</p>
+            </div>
+          )}
+
+          {!loading && rawMessages.length > 0 && (
+            <button
+              onClick={() => setShowRaw((v) => !v)}
+              className="mb-4 flex items-center gap-1 text-xs text-primary"
+            >
+              {showRaw ? <EyeOff size={14} /> : <Eye size={14} />}
+              {showRaw ? 'Hide raw messages' : `Show ${rawMessages.length} raw messages`}
+            </button>
+          )}
+
+          {showRaw && rawMessages.length > 0 && (
+            <div className="mb-4 space-y-2">
+              {rawMessages.map((m) => (
+                <div key={m.id} className="rounded-xl bg-surface p-3 text-xs text-on-surface border border-outline-variant">
+                  <p className="text-on-surface-variant">{new Date(m.date).toLocaleString()} · {m.address}</p>
+                  <p className="mt-1">{m.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && messages.length === 0 && permission !== 'denied' && (
             <div className="py-8 text-center">
               <Bell size={40} className="mx-auto mb-3 text-on-surface-variant" />
-              <p className="text-sm text-on-surface-variant">No bank messages found.</p>
-              <p className="mt-1 text-xs text-on-surface-variant">On Android, grant SMS permission to auto-import.</p>
+              <p className="text-sm text-on-surface-variant">No bank transactions found.</p>
             </div>
-          ) : (
+          )}
+
+          {messages.length > 0 && (
             <div className="mb-4 space-y-2">
               {messages.map((m) => (
                 <button

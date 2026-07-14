@@ -1,5 +1,6 @@
 import { Share } from '@capacitor/share'
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
+import { Filesystem, Directory } from '@capacitor/filesystem'
+import { Capacitor } from '@capacitor/core'
 
 export async function nativeShare(options) {
   try {
@@ -11,7 +12,7 @@ export async function nativeShare(options) {
     })
     return true
   } catch (err) {
-    if (err.message?.includes('cancelled')) return false
+    if (err.message?.includes('cancelled') || err.message?.includes('canceled')) return false
     console.error('Share failed', err)
     return false
   }
@@ -19,8 +20,8 @@ export async function nativeShare(options) {
 
 export async function shareFile(blob, filename, title) {
   try {
-    const reader = new FileReader()
     const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
       reader.onload = () => resolve(reader.result.split(',')[1])
       reader.onerror = reject
       reader.readAsDataURL(blob)
@@ -49,4 +50,21 @@ export async function shareFile(blob, filename, title) {
     console.error('shareFile failed', err)
     return false
   }
+}
+
+export async function downloadOrShare(blob, filename, title) {
+  if (Capacitor.isNativePlatform()) {
+    const ok = await shareFile(blob, filename, title)
+    if (!ok) throw new Error('Share failed or was cancelled.')
+    return true
+  }
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+  return true
 }

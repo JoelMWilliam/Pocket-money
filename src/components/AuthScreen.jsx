@@ -49,7 +49,7 @@ export default function AuthScreen() {
   }
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center bg-black px-6 py-12">
+    <div className="flex min-h-full flex-col items-center justify-center bg-surface px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-container">
@@ -153,7 +153,7 @@ export default function AuthScreen() {
                 type="checkbox"
                 checked={useDemo}
                 onChange={(e) => setUseDemo(e.target.checked)}
-                className="h-5 w-5 rounded border-outline-variant bg-black text-primary"
+                className="h-5 w-5 rounded border-outline-variant bg-surface text-primary"
               />
               Start with demo data
             </label>

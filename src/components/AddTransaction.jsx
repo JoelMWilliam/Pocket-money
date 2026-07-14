@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Calendar, Clock, FileText, Camera, Save, Split, Tag, LayoutTemplate, Copy } from 'lucide-react'
+import { X, ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Calendar, Clock, FileText, Camera, Save, Split, Tag, LayoutTemplate, Copy, Wallet } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { generateId, todayInputDate, nowInputTime } from '../lib/utils'
 import { saveReceipt, deleteReceipt, isIndexedDBReceipt, getReceiptIdFromReference, copyReceipt } from '../lib/receipts'
+import { getIcon } from '../lib/icons'
 import TagInput from './TagInput'
 import SplitEditor from './SplitEditor'
 import ReceiptImage from './ReceiptImage'
-import * as LucideIcons from 'lucide-react'
 
 import { useRegisterModal } from '../contexts/ModalContext'
 
@@ -30,6 +30,7 @@ export default function AddTransaction({ editing, onClose }) {
   const [time, setTime] = useState(editing?.time || nowInputTime())
   const [note, setNote] = useState(editing?.note || '')
   const [receipt, setReceipt] = useState(editing?.receipt || null)
+  const [receiptLoading, setReceiptLoading] = useState(false)
   const [tags, setTags] = useState(editing?.tags || [])
   const [splits, setSplits] = useState(editing?.splits || [])
   const [showSplits, setShowSplits] = useState(false)
@@ -91,10 +92,23 @@ export default function AddTransaction({ editing, onClose }) {
   }
 
   const handleSave = async () => {
+    if (receiptLoading) return
     const value = Number(amount)
     if (!value || value <= 0) return
     if (!accountId) return
     if (type === 'transfer' && !transferTo) return
+    if (type === 'transfer' && accountId === transferTo) {
+      alert('Cannot transfer to the same account.')
+      return
+    }
+    const account = accounts.find((a) => a.id === accountId)
+    if ((type === 'expense' || type === 'transfer') && account && account.type !== 'credit') {
+      const available = account.balance + (editing && editing.accountId === accountId ? editing.amount : 0)
+      if (value > available) {
+        alert('Insufficient funds in this account.')
+        return
+      }
+    }
     if (type === 'expense' && splits.length > 0) {
       const splitTotal = splits.reduce((s, x) => s + (Number(x.amount) || 0), 0)
       if (Math.abs(splitTotal - value) > 0.01) {
@@ -134,10 +148,22 @@ export default function AddTransaction({ editing, onClose }) {
   }
 
   const handleDuplicate = async () => {
+    if (receiptLoading) return
     const value = Number(amount)
     if (!value || value <= 0) return
     if (!accountId) return
     if (type === 'transfer' && !transferTo) return
+    if (type === 'transfer' && accountId === transferTo) {
+      alert('Cannot transfer to the same account.')
+      return
+    }
+    const account = accounts.find((a) => a.id === accountId)
+    if ((type === 'expense' || type === 'transfer') && account && account.type !== 'credit') {
+      if (value > account.balance) {
+        alert('Insufficient funds in this account.')
+        return
+      }
+    }
     if (type === 'expense' && splits.length > 0) {
       const splitTotal = splits.reduce((s, x) => s + (Number(x.amount) || 0), 0)
       if (Math.abs(splitTotal - value) > 0.01) {
@@ -172,11 +198,12 @@ export default function AddTransaction({ editing, onClose }) {
   const handleReceiptCapture = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    // Limit to ~1.5MB before base64 inflation
-    if (file.size > 1.5 * 1024 * 1024) {
-      alert('Receipt image too large. Please choose an image under 1.5MB.')
+    // Limit to ~8MB before base64 inflation
+    if (file.size > 8 * 1024 * 1024) {
+      alert('Receipt image too large. Please choose an image under 8MB.')
       return
     }
+    setReceiptLoading(true)
     const reader = new FileReader()
     reader.onload = async (event) => {
       const dataUrl = event.target.result
@@ -187,12 +214,21 @@ export default function AddTransaction({ editing, onClose }) {
       } catch (err) {
         console.error('Failed to save receipt', err)
         alert('Failed to save receipt. Storage may be full.')
+      } finally {
+        setReceiptLoading(false)
       }
+    }
+    reader.onerror = () => {
+      setReceiptLoading(false)
+      alert('Failed to read image')
     }
     reader.readAsDataURL(file)
   }
 
   const removeReceipt = () => {
+    if (receipt && isIndexedDBReceipt(receipt)) {
+      deleteReceipt(getReceiptIdFromReference(receipt)).catch((err) => console.error('Failed to delete receipt', err))
+    }
     setReceipt(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -230,7 +266,7 @@ export default function AddTransaction({ editing, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm">
-      <div className="flex w-full max-w-md max-h-[92vh] flex-col animate-slide-up rounded-t-3xl bg-black border-t border-outline-variant">
+      <div className="flex w-full max-w-md max-h-[92vh] flex-col animate-slide-up rounded-t-3xl bg-surface border-t border-outline-variant">
         {/* Header */}
         <div className="flex-none flex items-center justify-between border-b border-outline-variant px-5 py-4">
           <h2 className="text-lg font-bold text-on-surface">{editing ? 'Edit' : 'Add'} Transaction</h2>
@@ -238,7 +274,8 @@ export default function AddTransaction({ editing, onClose }) {
             {editing && (
               <button
                 onClick={handleDuplicate}
-                className="rounded-full p-2 text-on-surface-variant hover:bg-surface"
+                disabled={receiptLoading}
+                className="rounded-full p-2 text-on-surface-variant hover:bg-surface disabled:opacity-40"
                 title="Duplicate"
               >
                 <Copy size={18} />
@@ -316,7 +353,7 @@ export default function AddTransaction({ editing, onClose }) {
               <label className="mb-2 block text-xs font-medium text-on-surface-variant">Account</label>
               <div className="grid grid-cols-2 gap-2">
                 {accounts.map((a) => {
-                  const Icon = LucideIcons[a.icon] || LucideIcons.Wallet
+                  const Icon = getIcon(a.icon, Wallet)
                   return (
                     <button
                       key={a.id}
@@ -340,11 +377,11 @@ export default function AddTransaction({ editing, onClose }) {
               <div className="mb-4">
                 <label className="mb-2 block text-xs font-medium text-on-surface-variant">Transfer To</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {accounts
-                    .filter((a) => a.id !== accountId)
-                    .map((a) => {
-                      const Icon = LucideIcons[a.icon] || LucideIcons.Wallet
-                      return (
+                    {accounts
+                      .filter((a) => a.id !== accountId)
+                      .map((a) => {
+                        const Icon = getIcon(a.icon, Wallet)
+                        return (
                         <button
                           key={a.id}
                           type="button"
@@ -368,7 +405,7 @@ export default function AddTransaction({ editing, onClose }) {
               <label className="mb-2 block text-xs font-medium text-on-surface-variant">Category</label>
               <div className="grid grid-cols-3 gap-2">
                 {availableCategories.map((c) => {
-                  const Icon = LucideIcons[c.icon] || LucideIcons.CircleDollarSign
+                  const Icon = getIcon(c.icon)
                   return (
                     <button
                       key={c.id}
@@ -530,7 +567,7 @@ export default function AddTransaction({ editing, onClose }) {
               </div>
 
               {showTemplates && (
-                <div className="mt-2 rounded-2xl border border-outline-variant bg-black p-2">
+                <div className="mt-2 rounded-2xl border border-outline-variant bg-surface p-2">
                   {templates.length > 0 ? (
                     templates.map((t) => (
                       <button
@@ -559,10 +596,10 @@ export default function AddTransaction({ editing, onClose }) {
               </button>
               <button
                 onClick={handleSave}
-                disabled={!categoryId || (type === 'transfer' && !transferTo)}
+                disabled={!categoryId || (type === 'transfer' && !transferTo) || receiptLoading}
                 className="flex-1 rounded-2xl bg-primary py-3.5 text-sm font-semibold text-on-primary disabled:opacity-40"
               >
-                Save
+                {receiptLoading ? 'Saving receipt...' : 'Save'}
               </button>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, formatShortDate } from '../lib/utils'
 import { Receipt, Split, Tag } from 'lucide-react'
-import * as LucideIcons from 'lucide-react'
+import { getIcon } from '../lib/icons'
 
 export default function TransactionItem({ transaction, onClick, onDelete }) {
   const { accounts, categories } = useAppStore()
@@ -12,9 +12,7 @@ export default function TransactionItem({ transaction, onClick, onDelete }) {
   const account = accounts.find((a) => a.id === transaction.accountId)
   const category = categories.find((c) => c.id === transaction.categoryId)
 
-  const Icon = category?.icon
-    ? LucideIcons[category.icon] || LucideIcons.CircleDollarSign
-    : LucideIcons.CircleDollarSign
+  const Icon = category?.icon ? getIcon(category.icon) : getIcon('CircleDollarSign')
 
   const isIncome = transaction.type === 'income'
   const isExpense = transaction.type === 'expense'

@@ -17,6 +17,11 @@
       "style": "DARK",
       "backgroundColor": "#000000",
       "overlaysWebView": false
+    },
+    "SocialLogin": {
+      "google": {
+        "webClientId": "432912016198-nt5ekvasrs3qtkkdcm3ke36unldtt7mh.apps.googleusercontent.com"
+      }
     }
   },
   "android": {

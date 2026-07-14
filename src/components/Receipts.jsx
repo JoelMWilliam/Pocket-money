@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, Receipt, Trash2, ArrowRight } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, formatShortDate } from '../lib/utils'
+import { deleteTransactionReceipts } from '../lib/receipts'
 import ReceiptImage from './ReceiptImage'
 import ModalRoot from './ModalRoot'
 
@@ -11,8 +12,10 @@ export default function Receipts({ setScreen }) {
 
   const withReceipts = transactions.filter((t) => t.receipt)
 
-  const handleDelete = (txId) => {
+  const handleDelete = async (txId) => {
     if (!confirm('Remove this receipt photo?')) return
+    const tx = transactions.find((t) => t.id === txId)
+    await deleteTransactionReceipts(tx)
     updateTransaction(txId, { receipt: null })
     if (selected?.id === txId) setSelected(null)
   }

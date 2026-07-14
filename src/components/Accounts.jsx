@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Plus, Wallet2, Building2, Banknote, CreditCard, Landmark, X, CheckCircle2, Scale } from 'lucide-react'
+import { Wallet2, Building2, Banknote, CreditCard, Landmark, X, CheckCircle2, Scale, FileUp, Lock } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, generateId } from '../lib/utils'
-import * as LucideIcons from 'lucide-react'
+import { getIcon } from '../lib/icons'
+import { parsePDFText, extractStatementBalance } from '../lib/pdfParser'
+import { encryptAccountNumber, decryptAccountNumber, maskAccountNumber } from '../lib/accountNumber'
 
 import ModalRoot from './ModalRoot'
 
@@ -16,7 +18,10 @@ const ACCOUNT_TYPES = [
 
 const ACCOUNT_ICONS = ['Building2', 'Banknote', 'Wallet2', 'CreditCard', 'Landmark', 'PiggyBank', 'Coins']
 
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
 export default function Accounts() {
+  useRegisterQuickAdd(() => openNew())
   const { accounts, addAccount, updateAccount, deleteAccount, reconcileAccount } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -29,35 +34,46 @@ export default function Accounts() {
     balance: '',
     currency: 'LKR',
     color: '#0A84FF',
-    icon: 'Building2'
+    icon: 'Building2',
+    accountNumber: ''
   })
 
   const openNew = () => {
     setEditing(null)
-    setForm({ name: '', type: 'bank', balance: '', currency: 'LKR', color: '#0A84FF', icon: 'Building2' })
+    setForm({ name: '', type: 'bank', balance: '', currency: 'LKR', color: '#0A84FF', icon: 'Building2', accountNumber: '' })
     setShowForm(true)
   }
 
-  const openEdit = (account) => {
+  const openEdit = async (account) => {
     setEditing(account)
+    const store = useAppStore.getState()
+    const pinHash = store.auth.users[store.auth.currentUser]?.pinHash
+    const accountNumber = account.accountNumberEncrypted ? await decryptAccountNumber(account.accountNumberEncrypted, pinHash) : ''
     setForm({
       name: account.name,
       type: account.type,
       balance: String(account.balance),
       currency: account.currency,
       color: account.color,
-      icon: account.icon
+      icon: account.icon,
+      accountNumber
     })
     setShowForm(true)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    const store = useAppStore.getState()
+    const pinHash = store.auth.users[store.auth.currentUser]?.pinHash
+    const rawNumber = form.accountNumber?.replace(/\s/g, '') || ''
+    const accountNumberEncrypted = rawNumber ? await encryptAccountNumber(rawNumber, pinHash) : null
     const data = {
       ...form,
+      accountNumberEncrypted,
       initialBalance: Number(form.balance) || 0,
       balance: Number(form.balance) || 0
     }
+    delete data.accountNumber
     if (editing) {
       const old = accounts.find((a) => a.id === editing.id)
       const oldInitial = old?.initialBalance || 0
@@ -86,6 +102,23 @@ export default function Accounts() {
     setStatementBalance(String(account.balance))
   }
 
+  const handlePdfUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const text = await parsePDFText(arrayBuffer)
+      const balance = extractStatementBalance(text)
+      if (balance !== null) {
+        setStatementBalance(String(balance.toFixed(2)))
+      } else {
+        alert('Could not find a statement balance in this PDF. Enter it manually.')
+      }
+    } catch (err) {
+      alert('Failed to read PDF: ' + (err?.message || 'Unknown error'))
+    }
+  }
+
   const handleReconcile = (e) => {
     e.preventDefault()
     if (!reconciling) return
@@ -101,13 +134,6 @@ export default function Accounts() {
           <p className="text-sm text-on-surface-variant">Your money</p>
           <h1 className="text-2xl font-bold text-on-surface">Accounts</h1>
         </div>
-        <button
-          onClick={openNew}
-          aria-label="Add account"
-          className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
-        >
-          <Plus size={22} />
-        </button>
       </header>
 
       <section className="mb-6 rounded-3xl bg-surface p-6 border border-outline-variant">
@@ -117,7 +143,7 @@ export default function Accounts() {
 
       <section className="space-y-3">
         {accounts.map((account) => {
-          const Icon = LucideIcons[account.icon] || Building2
+          const Icon = getIcon(account.icon, Building2)
           const typeLabel = ACCOUNT_TYPES.find((t) => t.id === account.type)?.label || account.type
           const isReconciled =
             account.reconciledBalance !== undefined &&
@@ -199,7 +225,7 @@ export default function Accounts() {
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface focus:border-primary"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface focus:border-primary"
                   placeholder="e.g. Commercial Bank"
                 />
               </div>
@@ -210,7 +236,7 @@ export default function Accounts() {
                   <select
                     value={form.type}
                     onChange={(e) => setForm({ ...form, type: e.target.value })}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                   >
                     {ACCOUNT_TYPES.map((t) => (
                       <option key={t.id} value={t.id}>{t.label}</option>
@@ -225,10 +251,27 @@ export default function Accounts() {
                     step="0.01"
                     value={form.balance}
                     onChange={(e) => setForm({ ...form, balance: e.target.value })}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                     placeholder="0.00"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-on-surface-variant">Account / Card number (optional)</label>
+                <div className="relative">
+                  <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={20}
+                    value={form.accountNumber}
+                    onChange={(e) => setForm({ ...form, accountNumber: e.target.value.replace(/[^\d\s]/g, '') })}
+                    className="w-full rounded-xl border border-outline-variant bg-surface py-3 pl-10 pr-4 text-on-surface"
+                    placeholder="Full number or last 4 digits"
+                  />
+                </div>
+                <p className="mt-1 text-[10px] text-on-surface-variant">Stored encrypted. Used to match bank SMS to this account.</p>
               </div>
 
               <div>
@@ -291,9 +334,18 @@ export default function Accounts() {
               </div>
 
               <div className="space-y-4">
-                <div className="rounded-2xl bg-black p-4">
+                <div className="rounded-2xl bg-surface p-4">
                   <p className="text-xs text-on-surface-variant">App balance</p>
                   <p className="text-lg font-semibold text-on-surface">{formatLKR(reconciling.balance)}</p>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-on-surface-variant">Upload statement PDF</label>
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface active:bg-surface-bright">
+                    <FileUp size={16} />
+                    <span>Choose PDF</span>
+                    <input type="file" accept="application/pdf" onChange={handlePdfUpload} className="hidden" />
+                  </label>
                 </div>
 
                 <div>
@@ -305,7 +357,7 @@ export default function Accounts() {
                     step="0.01"
                     value={statementBalance}
                     onChange={(e) => setStatementBalance(e.target.value)}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                     placeholder="0.00"
                   />
                 </div>

@@ -46,7 +46,7 @@ export default function LockScreen() {
   }
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center bg-black px-6">
+    <div className="flex min-h-full flex-col items-center justify-center bg-surface px-6">
       <div className="w-full max-w-sm text-center">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary-container">
           <Lock size={36} className="text-primary" />

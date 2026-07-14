@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import Budgets from '../src/components/Budgets'
 
 vi.mock('../src/store/useAppStore', () => ({
@@ -28,11 +28,5 @@ describe('Budgets', () => {
     render(<Budgets />)
     expect(screen.getByText('Food & Dining')).toBeInTheDocument()
     expect(screen.getByText('40%')).toBeInTheDocument()
-  })
-
-  it('opens new budget form', () => {
-    render(<Budgets />)
-    fireEvent.click(screen.getAllByRole('button')[0])
-    expect(screen.getByText('New Budget')).toBeInTheDocument()
   })
 })

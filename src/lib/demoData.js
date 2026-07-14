@@ -249,5 +249,13 @@ export const DEMO_SETTINGS = {
   isDark: true,
   currency: 'LKR',
   lastBudgetMonth: null,
+  googleDriveBackupEnabled: false,
+  googleDriveBackupInterval: 'daily',
+  googleDriveBackupLastAt: null,
+  googleDriveBackupEmail: null,
+  smsAutoImportEnabled: false,
+  smsLastImportedAt: null,
+  smsImportedIds: [],
+  notificationsEnabled: false,
   updatedAt: Date.now()
 }

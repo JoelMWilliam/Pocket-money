@@ -7,3 +7,23 @@ backend/data
 dev.log
 *.log
 apk-output
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Android
+android/.idea
+android/.kotlin
+android/app/debug
+android/app/release
+android/app/build
+android/build
+android/captures
+android/local.properties
+android/*.iml
+android/app/*.iml
+*.keystore
+*.jks

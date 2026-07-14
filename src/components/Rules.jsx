@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, ShieldCheck } from 'lucide-react'
+import { X, Trash2, ShieldCheck } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import ModalRoot from './ModalRoot'
 
@@ -10,7 +10,10 @@ const FIELDS = [
   { id: 'any', name: 'Any field' }
 ]
 
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
 export default function Rules() {
+  useRegisterQuickAdd(() => openNew())
   const { accounts, categories, rules, addRule, updateRule, deleteRule } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -76,12 +79,6 @@ export default function Rules() {
           <p className="text-sm text-on-surface-variant">Automation</p>
           <h1 className="text-2xl font-bold text-on-surface">Rules</h1>
         </div>
-        <button
-          onClick={openNew}
-          className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
-        >
-          <Plus size={22} />
-        </button>
       </header>
 
       <section className="mb-24 space-y-3">
@@ -153,13 +150,13 @@ export default function Rules() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Rule name"
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
               />
               <div className="grid grid-cols-2 gap-3">
                 <select
                   value={form.field}
                   onChange={(e) => setForm({ ...form, field: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 >
                   {FIELDS.map((f) => (
                     <option key={f.id} value={f.id}>{f.name}</option>
@@ -170,14 +167,14 @@ export default function Rules() {
                   value={form.pattern}
                   onChange={(e) => setForm({ ...form, pattern: e.target.value })}
                   placeholder="Contains..."
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <select
                   value={form.actionCategoryId}
                   onChange={(e) => setForm({ ...form, actionCategoryId: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 >
                   <option value="">Set category...</option>
                   {categories.map((c) => (
@@ -187,7 +184,7 @@ export default function Rules() {
                 <select
                   value={form.actionAccountId}
                   onChange={(e) => setForm({ ...form, actionAccountId: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 >
                   <option value="">Set account...</option>
                   {accounts.map((a) => (
@@ -199,14 +196,14 @@ export default function Rules() {
                 value={form.actionTags}
                 onChange={(e) => setForm({ ...form, actionTags: e.target.value })}
                 placeholder="Add tags (comma separated)"
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
               />
               <label className="flex items-center gap-3 text-sm text-on-surface">
                 <input
                   type="checkbox"
                   checked={form.active}
                   onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                  className="h-5 w-5 rounded border-outline-variant bg-black text-primary"
+                  className="h-5 w-5 rounded border-outline-variant bg-surface text-primary"
                 />
                 Active
               </label>

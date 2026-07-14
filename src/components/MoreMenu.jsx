@@ -1,4 +1,4 @@
-import { BarChart3, TrendingDown, Calendar, Scale, Settings, X, LayoutTemplate, FileSpreadsheet, ShieldCheck, BarChart4, TrendingUp, ArrowRightLeft, Receipt, MessageSquare, Target, Wallet } from 'lucide-react'
+import { BarChart3, TrendingDown, Calendar, Scale, Settings, X, LayoutTemplate, FileSpreadsheet, ShieldCheck, BarChart4, TrendingUp, ArrowRightLeft, Receipt, MessageSquare, Target, Wallet, Tag, Bot } from 'lucide-react'
 
 import { useRegisterModal } from '../contexts/ModalContext'
 
@@ -15,7 +15,9 @@ const MORE_ITEMS = [
   { id: 'receipts', label: 'Receipts', icon: Receipt, desc: 'Receipt gallery' },
   { id: 'templates', label: 'Templates', icon: LayoutTemplate, desc: 'Quick transactions' },
   { id: 'rules', label: 'Rules', icon: ShieldCheck, desc: 'Auto-categorize' },
+  { id: 'categories', label: 'Categories', icon: Tag, desc: 'Manage tags' },
   { id: 'import', label: 'Import', icon: FileSpreadsheet, desc: 'CSV import' },
+  { id: 'assistant', label: 'Assistant', icon: Bot, desc: 'AI wealth assistant' },
   { id: 'sms', label: 'SMS', icon: MessageSquare, desc: 'Import from SMS', isAction: true },
   { id: 'settings', label: 'Settings', icon: Settings, desc: 'Preferences' }
 ]
@@ -54,7 +56,7 @@ export default function MoreMenu({ current, onChange, onClose, onAction }) {
                   className={`flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-colors ${
                     active
                       ? 'border-primary bg-primary-container'
-                      : 'border-outline-variant bg-black'
+                      : 'border-outline-variant bg-surface'
                   }`}
                 >
                   <Icon size={22} className={active ? 'text-primary' : 'text-on-surface-variant'} />

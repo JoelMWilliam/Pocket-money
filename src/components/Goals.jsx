@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, Target, PiggyBank } from 'lucide-react'
+import { X, Trash2, Target, PiggyBank } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { RegisterModal } from './ModalRoot'
 import { formatLKR } from '../lib/utils'
 
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
 export default function Goals() {
+  useRegisterQuickAdd(() => openNew())
   const { goals, addGoal, updateGoal, deleteGoal } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -59,13 +62,6 @@ export default function Goals() {
           <p className="text-sm text-on-surface-variant">Save towards</p>
           <h1 className="text-2xl font-bold text-on-surface">Goals</h1>
         </div>
-        <button
-          onClick={openNew}
-          aria-label="Add goal"
-          className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
-        >
-          <Plus size={22} />
-        </button>
       </header>
 
       <section className="space-y-4">
@@ -100,7 +96,7 @@ export default function Goals() {
                 <span className="text-sm text-on-surface-variant">{formatLKR(goal.target)}</span>
               </div>
 
-              <div className="h-3 w-full overflow-hidden rounded-full bg-black">
+              <div className="h-3 w-full overflow-hidden rounded-full bg-surface">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{ width: `${percent}%`, backgroundColor: goal.color }}
@@ -145,7 +141,7 @@ export default function Goals() {
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                   placeholder="e.g. Emergency Fund"
                 />
               </div>
@@ -159,7 +155,7 @@ export default function Goals() {
                     step="0.01"
                     value={form.target}
                     onChange={(e) => setForm({ ...form, target: e.target.value })}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                     placeholder="0.00"
                   />
                 </div>
@@ -171,7 +167,7 @@ export default function Goals() {
                     step="0.01"
                     value={form.current}
                     onChange={(e) => setForm({ ...form, current: e.target.value })}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                     placeholder="0.00"
                   />
                 </div>
@@ -184,7 +180,7 @@ export default function Goals() {
                   type="date"
                   value={form.deadline}
                   onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 />
               </div>
 

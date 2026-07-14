@@ -52,7 +52,7 @@ export default function UserSwitcher() {
                     key={username}
                     onClick={() => handleSwitch(username)}
                     className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left transition-colors ${
-                      isCurrent ? 'border-primary bg-primary-container' : 'border-outline-variant bg-black'
+                      isCurrent ? 'border-primary bg-primary-container' : 'border-outline-variant bg-surface'
                     }`}
                   >
                     <div className="flex items-center gap-3">

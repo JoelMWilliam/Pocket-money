@@ -19,7 +19,7 @@ import { sanitizeText, sanitizeTags, sanitizeUsername } from '../lib/sanitize'
 import { deleteTransactionReceipts, inlineReceipts, extractReceipts, migrateReceiptsToIndexedDB } from '../lib/receipts'
 import { canUseBiometrics, registerBiometric, verifyBiometric } from '../lib/biometric'
 import { storageGet, storageSet, storageRemove, zustandStorage } from '../lib/storage'
-import { cancelNotifications, scheduleBillReminder, idHash } from '../lib/notifications'
+import { cancelNotifications, scheduleBillReminder, scheduleBudgetAlert, cancelBudgetAlert, idHash } from '../lib/notifications'
 
 const LOCK_TIMEOUT = 5 * 60 * 1000 // 5 minutes
 
@@ -40,7 +40,7 @@ function mergeById(local = [], remote = [], timestampField = 'updatedAt') {
 }
 
 function getInitialUserData() {
-  return {
+  return JSON.parse(JSON.stringify({
     settings: DEMO_SETTINGS,
     accounts: DEMO_ACCOUNTS,
     categories: DEMO_CATEGORIES,
@@ -53,23 +53,75 @@ function getInitialUserData() {
     loans: DEMO_LOANS,
     templates: [],
     rules: []
-  }
+  }))
+}
+
+function normalizeUserData(data) {
+  ;(data.accounts || []).forEach((a) => {
+    a.initialBalance = Number(a.initialBalance) || 0
+    a.balance = Number(a.balance) || a.initialBalance
+  })
+  ;(data.transactions || []).forEach((t) => {
+    t.amount = Number(t.amount) || 0
+  })
+  ;(data.budgets || []).forEach((b) => {
+    b.amount = Number(b.amount) || 0
+  })
+  ;(data.goals || []).forEach((g) => {
+    g.target = Number(g.target) || 0
+    g.current = Number(g.current) || 0
+  })
+  ;(data.debts || []).forEach((d) => {
+    d.principal = Number(d.principal) || 0
+    d.balance = Number(d.balance) || 0
+    d.interestRate = Number(d.interestRate) || 0
+    d.minimumPayment = Number(d.minimumPayment) || 0
+  })
+  ;(data.recurring || []).forEach((r) => {
+    r.amount = Number(r.amount) || 0
+  })
+  ;(data.investments || []).forEach((i) => {
+    i.units = Number(i.units) || 0
+    i.purchasePrice = Number(i.purchasePrice) || 0
+    i.currentPrice = Number(i.currentPrice) || 0
+  })
+  ;(data.loans || []).forEach((l) => {
+    l.amount = Number(l.amount) || 0
+    l.repaid = Number(l.repaid) || 0
+  })
+  return data
 }
 
 function getEmptyUserData() {
   const now = Date.now()
   return {
-    settings: { seedColor: '#0A84FF', isDark: true, currency: 'LKR', lastBudgetMonth: null, updatedAt: now },
+    settings: { seedColor: '#0A84FF', isDark: true, currency: 'LKR', lastBudgetMonth: null, onboardingGoal: null, googleDriveBackupEnabled: false, googleDriveBackupInterval: 'daily', googleDriveBackupLastAt: null, googleDriveBackupEmail: null, smsAutoImportEnabled: false, smsLastImportedAt: null, smsImportedIds: [], notificationsEnabled: false, updatedAt: now },
     accounts: [],
     categories: [
       { id: 'cat-food', name: 'Food & Dining', icon: 'Utensils', color: '#FF9500', type: 'expense', updatedAt: now },
+      { id: 'cat-groceries', name: 'Groceries', icon: 'ShoppingCart', color: '#FFCC00', type: 'expense', updatedAt: now },
       { id: 'cat-transport', name: 'Transport', icon: 'Bus', color: '#0A84FF', type: 'expense', updatedAt: now },
+      { id: 'cat-fuel', name: 'Fuel', icon: 'Fuel', color: '#FF375F', type: 'expense', updatedAt: now },
       { id: 'cat-bills', name: 'Bills & Utilities', icon: 'Receipt', color: '#FF375F', type: 'expense', updatedAt: now },
+      { id: 'cat-rent', name: 'Rent / Mortgage', icon: 'Home', color: '#BF5AF2', type: 'expense', updatedAt: now },
+      { id: 'cat-insurance', name: 'Insurance', icon: 'ShieldCheck', color: '#5E5CE6', type: 'expense', updatedAt: now },
       { id: 'cat-entertainment', name: 'Entertainment', icon: 'Film', color: '#BF5AF2', type: 'expense', updatedAt: now },
-      { id: 'cat-shopping', name: 'Shopping', icon: 'ShoppingBag', color: '#FFCC00', type: 'expense', updatedAt: now },
+      { id: 'cat-shopping', name: 'Shopping', icon: 'ShoppingBag', color: '#FF9500', type: 'expense', updatedAt: now },
       { id: 'cat-health', name: 'Health', icon: 'HeartPulse', color: '#30D158', type: 'expense', updatedAt: now },
+      { id: 'cat-education', name: 'Education', icon: 'GraduationCap', color: '#64D2FF', type: 'expense', updatedAt: now },
+      { id: 'cat-travel', name: 'Travel', icon: 'Plane', color: '#0A84FF', type: 'expense', updatedAt: now },
+      { id: 'cat-gifts', name: 'Gifts', icon: 'Gift', color: '#FF375F', type: 'expense', updatedAt: now },
+      { id: 'cat-donations', name: 'Donations', icon: 'HandHeart', color: '#30D158', type: 'expense', updatedAt: now },
+      { id: 'cat-personal', name: 'Personal Care', icon: 'Smile', color: '#BF5AF2', type: 'expense', updatedAt: now },
+      { id: 'cat-pets', name: 'Pets', icon: 'PawPrint', color: '#FF9500', type: 'expense', updatedAt: now },
+      { id: 'cat-subscriptions', name: 'Subscriptions', icon: 'CreditCard', color: '#5E5CE6', type: 'expense', updatedAt: now },
+      { id: 'cat-investments', name: 'Investments', icon: 'TrendingUp', color: '#30D158', type: 'expense', updatedAt: now },
       { id: 'cat-salary', name: 'Salary', icon: 'Banknote', color: '#30D158', type: 'income', updatedAt: now },
-      { id: 'cat-gifts', name: 'Gifts', icon: 'Gift', color: '#64D2FF', type: 'income', updatedAt: now },
+      { id: 'cat-freelance', name: 'Freelance', icon: 'Briefcase', color: '#64D2FF', type: 'income', updatedAt: now },
+      { id: 'cat-refunds', name: 'Refunds', icon: 'RotateCcw', color: '#0A84FF', type: 'income', updatedAt: now },
+      { id: 'cat-interest', name: 'Interest', icon: 'Percent', color: '#FFCC00', type: 'income', updatedAt: now },
+      { id: 'cat-dividends', name: 'Dividends', icon: 'Coins', color: '#BF5AF2', type: 'income', updatedAt: now },
+      { id: 'cat-cashback', name: 'Cashback', icon: 'Banknote', color: '#FF9500', type: 'income', updatedAt: now },
       { id: 'cat-transfer', name: 'Transfer', icon: 'ArrowLeftRight', color: '#8E8E93', type: 'transfer', updatedAt: now }
     ],
     transactions: [],
@@ -124,14 +176,15 @@ export const useAppStore = create(
             isLocked: false,
             users: {
               ...state.auth.users,
-              [username]: {
-                pinHash,
-                biometricEnabled: false,
-                encryptionEnabled: false,
-                failedPinAttempts: 0,
-                lockedUntil: null,
-                createdAt: Date.now()
-              }
+                [username]: {
+                  pinHash,
+                  biometricEnabled: false,
+                  encryptionEnabled: false,
+                  failedPinAttempts: 0,
+                  lockedUntil: null,
+                  avatar: options.avatar || null,
+                  createdAt: Date.now()
+                }
             }
           },
           usersData: {
@@ -305,7 +358,8 @@ export const useAppStore = create(
       },
 
       switchUser: async (username) => {
-        get().saveCurrentUserData()
+        await get().saveCurrentUserData()
+        await get().persistUserData()
         await get().loadUserData(username)
         const userData = get().usersData[username] || getEmptyUserData()
         userData.transactions = userData.transactions ? [...userData.transactions] : []
@@ -355,6 +409,101 @@ export const useAppStore = create(
         const { auth, usersData } = get()
         await storageSet('auth-backup', auth)
         await storageSet('usersdata-backup', usersData)
+      },
+
+      enableGoogleDriveBackup: async () => {
+        const { isGoogleDriveConfigured, signInToGoogleDrive } = await import('../lib/googleDrive')
+        if (!isGoogleDriveConfigured()) throw new Error('Google Drive client ID is not configured.')
+        const auth = await signInToGoogleDrive()
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            googleDriveBackupEnabled: true,
+            googleDriveBackupEmail: auth.email
+          }
+        }))
+        get().persistUserData()
+        return auth
+      },
+
+      disableGoogleDriveBackup: async () => {
+        const { signOutFromGoogleDrive } = await import('../lib/googleDrive')
+        await signOutFromGoogleDrive()
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            googleDriveBackupEnabled: false,
+            googleDriveBackupLastAt: null,
+            googleDriveBackupEmail: null
+          }
+        }))
+        get().persistUserData()
+      },
+
+      backupToGoogleDrive: async (force = false) => {
+        const settings = get().settings
+        if (!settings.googleDriveBackupEnabled && !force) {
+          return { success: false, message: 'Google Drive backup is not enabled.' }
+        }
+        try {
+          const { uploadBackupToDrive } = await import('../lib/googleDrive')
+          const data = {
+            settings: get().settings,
+            accounts: get().accounts,
+            categories: get().categories,
+            transactions: get().transactions,
+            budgets: get().budgets,
+            goals: get().goals,
+            debts: get().debts,
+            recurring: get().recurring,
+            investments: get().investments,
+            loans: get().loans
+          }
+          const result = await uploadBackupToDrive(data)
+          set((state) => ({
+            settings: { ...state.settings, googleDriveBackupLastAt: Date.now() }
+          }))
+          get().persistUserData()
+          return { success: true, ...result }
+        } catch (err) {
+          return { success: false, message: err.message }
+        }
+      },
+
+      restoreFromGoogleDrive: async () => {
+        try {
+          const { downloadBackupFromDrive } = await import('../lib/googleDrive')
+          const data = await downloadBackupFromDrive()
+          get().replaceState(data)
+          return { success: true }
+        } catch (err) {
+          return { success: false, message: err.message }
+        }
+      },
+
+      maybeAutoBackupToGoogleDrive: async () => {
+        const settings = get().settings
+        if (!settings.googleDriveBackupEnabled) return
+        const interval = settings.googleDriveBackupInterval || 'daily'
+        if (interval === 'manual') return
+
+        const last = settings.googleDriveBackupLastAt || 0
+        const now = Date.now()
+        const oneMinute = 60_000
+
+        // Throttle all intervals to at most one backup per minute to avoid loops.
+        if (now - last < oneMinute) return
+
+        if (interval === 'onchange') {
+          await get().backupToGoogleDrive()
+          return
+        }
+
+        const dayMs = 24 * 60 * 60 * 1000
+        const threshold = interval === 'weekly' ? 7 * dayMs : dayMs
+        if (now - last >= threshold) {
+          await get().backupToGoogleDrive()
+        }
       },
 
       loadUserData: async (username) => {
@@ -523,11 +672,13 @@ export const useAppStore = create(
         get().recalculateBalances()
         get().persistUserData()
       },
-      deleteAccount: (id) => {
+      deleteAccount: async (id) => {
+        const removed = get().transactions.filter((t) => t.accountId === id || t.transferTo === id)
         set((state) => ({
           accounts: state.accounts.filter((a) => a.id !== id),
           transactions: state.transactions.filter((t) => t.accountId !== id && t.transferTo !== id)
         }))
+        await Promise.all(removed.map((t) => deleteTransactionReceipts(t)))
         get().recalculateBalances()
         get().persistUserData()
       },
@@ -583,6 +734,8 @@ export const useAppStore = create(
           return next
         })
         get().recalculateBalances()
+        get().checkBudgetAlerts()
+        get().maybeAutoBackupToGoogleDrive()
         get().persistUserData()
         return newTx
       },
@@ -605,6 +758,8 @@ export const useAppStore = create(
           return { transactions: nextTransactions }
         })
         get().recalculateBalances()
+        get().checkBudgetAlerts()
+        get().maybeAutoBackupToGoogleDrive()
         get().persistUserData()
       },
       deleteTransaction: async (id) => {
@@ -614,6 +769,8 @@ export const useAppStore = create(
           transactions: state.transactions.filter((t) => t.id !== id)
         }))
         get().recalculateBalances()
+        get().checkBudgetAlerts()
+        get().maybeAutoBackupToGoogleDrive()
         get().persistUserData()
       },
       bulkDeleteTransactions: async (ids) => {
@@ -625,6 +782,8 @@ export const useAppStore = create(
           transactions: state.transactions.filter((t) => !ids.includes(t.id))
         }))
         get().recalculateBalances()
+        get().checkBudgetAlerts()
+        get().maybeAutoBackupToGoogleDrive()
         get().persistUserData()
       },
       bulkUpdateTransactions: (ids, patch) => {
@@ -635,6 +794,8 @@ export const useAppStore = create(
           transactions: state.transactions.map((t) => (ids.includes(t.id) ? { ...t, ...cleanPatch, updatedAt: Date.now() } : t))
         }))
         get().recalculateBalances()
+        get().checkBudgetAlerts()
+        get().maybeAutoBackupToGoogleDrive()
         get().persistUserData()
       },
 
@@ -646,16 +807,22 @@ export const useAppStore = create(
             { ...budget, id: generateId(), rollover: budget.rollover ?? false, rolloverAmount: budget.rolloverAmount ?? 0, updatedAt: Date.now() }
           ]
         }))
+        get().checkBudgetAlerts()
+        get().maybeAutoBackupToGoogleDrive()
         get().persistUserData()
       },
       updateBudget: (id, patch) => {
         set((state) => ({
           budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...patch, updatedAt: Date.now() } : b))
         }))
+        get().checkBudgetAlerts()
+        get().maybeAutoBackupToGoogleDrive()
         get().persistUserData()
       },
       deleteBudget: (id) => {
         set((state) => ({ budgets: state.budgets.filter((b) => b.id !== id) }))
+        cancelBudgetAlert(id)
+        get().maybeAutoBackupToGoogleDrive()
         get().persistUserData()
       },
 
@@ -758,13 +925,16 @@ export const useAppStore = create(
           else if (frequency === 'monthly') d.setMonth(d.getMonth() + 1)
           else if (frequency === 'quarterly') d.setMonth(d.getMonth() + 3)
           else if (frequency === 'yearly') d.setFullYear(d.getFullYear() + 1)
+          else d.setMonth(d.getMonth() + 1) // default to monthly for invalid/missing frequency
           return d.toISOString().slice(0, 10)
         }
 
         recurring.forEach((r) => {
           if (!r.active) return
           let current = r.nextDueDate
-          while (current && current <= end) {
+          let iterations = 0
+          const MAX_ITERATIONS = 120
+          while (current && current <= end && iterations < MAX_ITERATIONS) {
             addTransaction({
               accountId: r.accountId || (get().accounts[0]?.id || ''),
               amount: r.amount,
@@ -776,11 +946,30 @@ export const useAppStore = create(
             })
             generated++
             current = nextDate(current, r.frequency)
+            iterations++
           }
           updateRecurring(r.id, { nextDueDate: current })
         })
 
         return generated
+      },
+
+      checkBudgetAlerts: () => {
+        const { budgets, categories, getBudgetProgress } = get()
+        budgets.forEach(async (b) => {
+          try {
+            const { spent, limit, percent } = getBudgetProgress(b.id)
+            if (limit > 0 && percent >= 100) {
+              const category = categories.find((c) => c.id === b.categoryId)
+              await scheduleBudgetAlert(b.id, category?.name || 'Budget', spent, limit)
+            } else {
+              await cancelBudgetAlert(b.id)
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('Budget alert failed', err)
+          }
+        })
       },
 
       // === Investments ===
@@ -876,11 +1065,14 @@ export const useAppStore = create(
 
       // === Bulk import / reset ===
       replaceState: (newState) => {
-        set({ ...getEmptyUserData(), ...newState })
+        const merged = normalizeUserData({ ...getEmptyUserData(), ...newState })
+        set(merged)
+        get().recalculateBalances()
         get().persistUserData()
       },
       resetToDemo: () => {
         set(getInitialUserData())
+        get().recalculateBalances()
         get().persistUserData()
       },
 
@@ -996,18 +1188,21 @@ export const useAppStore = create(
           // Prefer the dedicated per-user backup if it exists.
           const stored = await storageGet(`userdata-${username}`, null)
           if (stored) {
+            state.usersData = state.usersData || {}
             state.usersData[username] = stored
             usersData = state.usersData
           }
-          const userData = usersData[username] || getEmptyUserData()
+          const userData = (usersData && usersData[username]) || getEmptyUserData()
           // Merge safely without mutating the frozen persist state object.
           Object.keys(userData).forEach((key) => {
             if (key in state) state[key] = userData[key]
           })
           state.recalculateBalances?.()
           state.rolloverBudgets?.()
-          state.auth.isLocked = true
-          state.auth.lockAt = Date.now()
+          if (state.auth) {
+            state.auth.isLocked = true
+            state.auth.lockAt = Date.now()
+          }
         }
       }
     }

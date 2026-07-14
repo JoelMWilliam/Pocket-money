@@ -15,6 +15,7 @@
     "test:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@aparajita/capacitor-biometric-auth": "^10.0.0",
     "@capacitor-community/sqlite": "^8.1.0",
     "@capacitor/android": "^8.4.1",
     "@capacitor/app": "^8.1.0",
@@ -26,12 +27,18 @@
     "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
+    "@capgo/capacitor-social-login": "^8.3.36",
     "@material/material-color-utilities": "^0.2.7",
+    "capacitor-email-composer": "^8.0.0",
     "dompurify": "^3.4.11",
     "lucide-react": "^0.400.0",
+    "openai": "^6.46.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.1.200",
     "picomatch": "^4.0.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-easy-crop": "^6.2.2",
     "recharts": "^2.12.7",
     "zustand": "^4.5.4"
   },

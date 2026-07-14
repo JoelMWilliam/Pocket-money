@@ -1,11 +1,14 @@
 import { useMemo } from 'react'
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, PiggyBank, Lightbulb, Calendar, AlertCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, PiggyBank, Lightbulb, Calendar, AlertCircle, User } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, getCurrentMonth } from '../lib/utils'
 import TransactionItem from './TransactionItem'
 import UserSwitcher from './UserSwitcher'
 
-export default function Dashboard({ setScreen }) {
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
+export default function Dashboard({ setScreen, onAddTransaction }) {
+  useRegisterQuickAdd(onAddTransaction)
   const { auth, accounts, transactions, goals, budgets, categories, recurring, getMonthlyTotals, getTotalBalance } =
     useAppStore()
 
@@ -65,12 +68,24 @@ export default function Dashboard({ setScreen }) {
   }, [recurring, todayStr, next7Days])
   const upcomingTotal = upcomingBills.reduce((sum, r) => sum + r.amount, 0)
 
+  const currentUser = auth.users?.[auth.currentUser]
+  const avatar = currentUser?.avatar
+
   return (
     <div className="animate-fade-in px-4 pt-6">
       <header className="mb-6 flex items-center justify-between">
-        <div>
-          <p className="text-sm text-on-surface-variant">{greeting}</p>
-          <h1 className="text-2xl font-bold text-on-surface">Pocket Money</h1>
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-surface">
+            {avatar ? (
+              <img src={avatar} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <User size={24} className="text-on-surface-variant" />
+            )}
+          </div>
+          <div>
+            <p className="text-sm text-on-surface-variant">{greeting}</p>
+            <h1 className="text-2xl font-bold text-on-surface">{auth.currentUser || 'Pocket Money'}</h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <UserSwitcher />
@@ -88,14 +103,14 @@ export default function Dashboard({ setScreen }) {
         <p className="text-sm font-medium text-on-surface-variant">Total Balance</p>
         <p className="mt-1 text-4xl font-bold tracking-tight text-on-surface">{formatLKR(netWorth)}</p>
         <div className="mt-4 flex gap-4">
-          <div className="flex items-center gap-2 rounded-2xl bg-black/30 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-2xl bg-surface-variant px-3 py-2">
             <TrendingUp size={16} className="text-primary" />
             <div>
               <p className="text-[10px] text-on-surface-variant">Income</p>
               <p className="text-sm font-semibold text-on-surface">{formatLKR(income)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 rounded-2xl bg-black/30 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-2xl bg-surface-variant px-3 py-2">
             <TrendingDown size={16} className="text-error" />
             <div>
               <p className="text-[10px] text-on-surface-variant">Spent</p>
@@ -130,12 +145,12 @@ export default function Dashboard({ setScreen }) {
           <h2 className="text-base font-semibold text-on-surface">This Month</h2>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-black p-3">
+          <div className="rounded-2xl bg-surface p-3">
             <p className="text-xs text-on-surface-variant">Top Category</p>
             <p className="text-sm font-semibold text-on-surface truncate">{insights.topCategory?.name || 'None'}</p>
             <p className="text-xs text-on-surface-variant">{formatLKR(insights.topCategoryAmount)}</p>
           </div>
-          <div className="rounded-2xl bg-black p-3">
+          <div className="rounded-2xl bg-surface p-3">
             <p className="text-xs text-on-surface-variant">Daily Average</p>
             <p className="text-sm font-semibold text-on-surface">{formatLKR(insights.dailyAverage)}</p>
           </div>
@@ -164,7 +179,7 @@ export default function Dashboard({ setScreen }) {
               See all <ArrowRight size={14} />
             </button>
           </div>
-          <div className="mb-3 rounded-2xl bg-black p-3">
+          <div className="mb-3 rounded-2xl bg-surface p-3">
             <p className="text-xs text-on-surface-variant">Due in next 7 days</p>
             <p className="text-lg font-semibold text-on-surface">{formatLKR(upcomingTotal)}</p>
           </div>
@@ -173,7 +188,7 @@ export default function Dashboard({ setScreen }) {
               const category = categories.find((c) => c.id === item.categoryId)
               const isDueSoon = item.nextDueDate <= next7Days && item.nextDueDate >= todayStr
               return (
-                <div key={item.id} className="flex items-center justify-between rounded-xl bg-black p-3">
+                <div key={item.id} className="flex items-center justify-between rounded-xl bg-surface p-3">
                   <div className="flex items-center gap-2">
                     {isDueSoon && <AlertCircle size={14} className="text-primary" />}
                     <p className="text-sm text-on-surface">{item.name}</p>
@@ -252,7 +267,7 @@ export default function Dashboard({ setScreen }) {
                     {goal.target > 0 ? Math.round((goal.current / goal.target) * 100) : 0}%
                   </span>
                 </div>
-                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-black">
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{

@@ -1,5 +1,6 @@
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { Capacitor } from '@capacitor/core'
+import { formatLKR } from './utils'
 
 const IS_NATIVE = Capacitor.isNativePlatform()
 
@@ -61,6 +62,28 @@ export async function scheduleDailyReminder(id, title, body, hour = 20, minute =
 export async function cancelNotifications(ids) {
   if (!IS_NATIVE) return
   await LocalNotifications.cancel({ notifications: ids.map((id) => ({ id })) })
+}
+
+export async function scheduleBudgetAlert(budgetId, categoryName, spent, limit) {
+  if (!IS_NATIVE) return false
+  await cancelBudgetAlert(budgetId)
+  await LocalNotifications.schedule({
+    notifications: [
+      {
+        id: idHash(`budget-over-${budgetId}`),
+        title: 'Budget exceeded',
+        body: `${categoryName}: ${formatLKR(spent)} of ${formatLKR(limit)}`,
+        schedule: { at: new Date() },
+        extra: { budgetId }
+      }
+    ]
+  })
+  return true
+}
+
+export async function cancelBudgetAlert(budgetId) {
+  if (!IS_NATIVE) return
+  await LocalNotifications.cancel({ notifications: [{ id: idHash(`budget-over-${budgetId}`) }] })
 }
 
 export async function cancelAllNotifications() {

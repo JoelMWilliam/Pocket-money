@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, ArrowRightLeft } from 'lucide-react'
+import { X, Trash2, ArrowRightLeft } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR } from '../lib/utils'
 import ModalRoot from './ModalRoot'
 
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
 export default function Loans() {
+  useRegisterQuickAdd(() => openNew())
   const { loans, addLoan, updateLoan, deleteLoan } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -71,12 +74,6 @@ export default function Loans() {
           <p className="text-sm text-on-surface-variant">Money lent or borrowed</p>
           <h1 className="text-2xl font-bold text-on-surface">Loans & IOUs</h1>
         </div>
-        <button
-          onClick={openNew}
-          className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
-        >
-          <Plus size={22} />
-        </button>
       </header>
 
       <section className="mb-6 grid grid-cols-2 gap-3">
@@ -118,7 +115,7 @@ export default function Loans() {
                 </div>
                 <p className="text-sm font-semibold text-on-surface">{formatLKR(remaining)}</p>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-black">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
                 <div
                   className="h-full rounded-full bg-primary"
                   style={{ width: `${progress}%` }}
@@ -164,7 +161,7 @@ export default function Loans() {
                   <select
                     value={form.type}
                     onChange={(e) => setForm({ ...form, type: e.target.value })}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   >
                     <option value="lent">I lent</option>
                     <option value="borrowed">I borrowed</option>
@@ -177,7 +174,7 @@ export default function Loans() {
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     placeholder="Kasun"
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   />
                 </div>
               </div>
@@ -191,7 +188,7 @@ export default function Loans() {
                     value={form.amount}
                     onChange={(e) => setForm({ ...form, amount: e.target.value })}
                     placeholder="0.00"
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   />
                 </div>
                 <div>
@@ -202,7 +199,7 @@ export default function Loans() {
                     value={form.repaid}
                     onChange={(e) => setForm({ ...form, repaid: e.target.value })}
                     placeholder="0.00"
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   />
                 </div>
               </div>
@@ -214,7 +211,7 @@ export default function Loans() {
                     type="date"
                     value={form.date}
                     onChange={(e) => setForm({ ...form, date: e.target.value })}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   />
                 </div>
                 <div>
@@ -223,7 +220,7 @@ export default function Loans() {
                     type="date"
                     value={form.dueDate}
                     onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-                    className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                   />
                 </div>
               </div>
@@ -234,7 +231,7 @@ export default function Loans() {
                   value={form.note}
                   onChange={(e) => setForm({ ...form, note: e.target.value })}
                   placeholder="Optional details"
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-sm text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface"
                 />
               </div>
             </div>

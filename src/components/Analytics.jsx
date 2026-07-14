@@ -160,7 +160,7 @@ export default function Analytics() {
                     </div>
                     <span className="shrink-0 font-medium text-on-surface">{formatLKR(item.value)}</span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-black">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
                     <div
                       className="h-full rounded-full"
                       style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: item.color }}

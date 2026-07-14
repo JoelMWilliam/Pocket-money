@@ -34,12 +34,25 @@ export function applyThemeToDocument(seedColor, isDark = true) {
     console.warn('Dynamic theme generation failed, using fallback:', e)
   }
 
-  // Force AMOLED black palette overrides
-  root.style.setProperty('--md-sys-color-background', '#000000')
-  root.style.setProperty('--md-sys-color-on-background', '#E3E3E3')
-  root.style.setProperty('--md-sys-color-surface', '#0A0A0A')
-  root.style.setProperty('--md-sys-color-surface-bright', '#111111')
-  root.style.setProperty('--md-sys-color-surface-variant', '#1C1C1E')
+  if (isDark) {
+    // AMOLED-safe dark palette overrides
+    root.style.setProperty('--md-sys-color-background', '#000000')
+    root.style.setProperty('--md-sys-color-on-background', '#E3E3E3')
+    root.style.setProperty('--md-sys-color-surface', '#0A0A0A')
+    root.style.setProperty('--md-sys-color-surface-bright', '#111111')
+    root.style.setProperty('--md-sys-color-surface-variant', '#1C1C1E')
+    root.style.setProperty('--md-sys-color-outline', '#38383A')
+    root.style.setProperty('--md-sys-color-outline-variant', '#2C2C2E')
+  } else {
+    // Clean light palette overrides
+    root.style.setProperty('--md-sys-color-background', '#FFFFFF')
+    root.style.setProperty('--md-sys-color-on-background', '#1C1C1E')
+    root.style.setProperty('--md-sys-color-surface', '#F2F2F7')
+    root.style.setProperty('--md-sys-color-surface-bright', '#FFFFFF')
+    root.style.setProperty('--md-sys-color-surface-variant', '#E5E5EA')
+    root.style.setProperty('--md-sys-color-outline', '#C7C7CC')
+    root.style.setProperty('--md-sys-color-outline-variant', '#D1D1D6')
+  }
 
   root.classList.toggle('dark', isDark)
 }

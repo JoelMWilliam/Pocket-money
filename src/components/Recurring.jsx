@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
-import { Plus, X, Trash2, Calendar as CalendarIcon, Zap } from 'lucide-react'
+import { X, Trash2, Calendar as CalendarIcon, Zap } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { RegisterModal } from './ModalRoot'
 import { formatLKR, todayInputDate } from '../lib/utils'
-import * as LucideIcons from 'lucide-react'
+import { getIcon } from '../lib/icons'
 
 const FREQUENCIES = [
   { id: 'weekly', name: 'Weekly' },
@@ -13,7 +13,10 @@ const FREQUENCIES = [
   { id: 'yearly', name: 'Yearly' }
 ]
 
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
 export default function Recurring() {
+  useRegisterQuickAdd(() => openNew())
   const { recurring, accounts, categories, addTransaction, addRecurring, updateRecurring, deleteRecurring, generateRecurringTransactions } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -126,13 +129,6 @@ export default function Recurring() {
           <p className="text-sm text-on-surface-variant">Bills & income</p>
           <h1 className="text-2xl font-bold text-on-surface">Recurring</h1>
         </div>
-        <button
-          onClick={openNew}
-          aria-label="Add recurring"
-          className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
-        >
-          <Plus size={22} />
-        </button>
       </header>
 
       <section className="mb-5 rounded-3xl bg-surface p-5 border border-outline-variant">
@@ -162,7 +158,7 @@ export default function Recurring() {
             upcoming.map((item) => {
               const category = categories.find((c) => c.id === item.categoryId)
               const account = accounts.find((a) => a.id === item.accountId)
-              const Icon = category?.icon ? LucideIcons[category.icon] : LucideIcons.CircleDollarSign
+              const Icon = category?.icon ? getIcon(category.icon) : getIcon('CircleDollarSign')
               const isDueSoon = item.nextDueDate >= todayStr && item.nextDueDate <= next7Days
               const isOverdue = item.nextDueDate < todayStr
 
@@ -239,7 +235,7 @@ export default function Recurring() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Name"
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
               />
               <div className="grid grid-cols-2 gap-3">
                 <input
@@ -249,12 +245,12 @@ export default function Recurring() {
                   value={form.amount}
                   onChange={(e) => setForm({ ...form, amount: e.target.value })}
                   placeholder="Amount"
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 />
                 <select
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 >
                   <option value="expense">Expense</option>
                   <option value="income">Income</option>
@@ -264,7 +260,7 @@ export default function Recurring() {
                 <select
                   value={form.categoryId}
                   onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 >
                   <option value="">No category</option>
                   {categories
@@ -276,7 +272,7 @@ export default function Recurring() {
                 <select
                   value={form.accountId}
                   onChange={(e) => setForm({ ...form, accountId: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 >
                   <option value="">No account</option>
                   {accounts.map((a) => (
@@ -288,7 +284,7 @@ export default function Recurring() {
                 <select
                   value={form.frequency}
                   onChange={(e) => setForm({ ...form, frequency: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 >
                   {FREQUENCIES.map((f) => (
                     <option key={f.id} value={f.id}>{f.name}</option>
@@ -299,7 +295,7 @@ export default function Recurring() {
                   type="date"
                   value={form.nextDueDate}
                   onChange={(e) => setForm({ ...form, nextDueDate: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 />
               </div>
               <input
@@ -307,14 +303,14 @@ export default function Recurring() {
                 value={form.reminderDays}
                 onChange={(e) => setForm({ ...form, reminderDays: e.target.value })}
                 placeholder="Reminder days before"
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
               />
               <label className="flex items-center gap-3 text-sm text-on-surface">
                 <input
                   type="checkbox"
                   checked={form.active}
                   onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                  className="h-5 w-5 rounded border-outline-variant bg-black text-primary"
+                  className="h-5 w-5 rounded border-outline-variant bg-surface text-primary"
                 />
                 Active
               </label>

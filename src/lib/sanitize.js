@@ -6,6 +6,16 @@ export function sanitizeText(input, maxLength = 500) {
   return DOMPurify.sanitize(trimmed, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
 }
 
+export function escapeHtml(input) {
+  if (typeof input !== 'string') return String(input)
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 export function sanitizeUsername(input) {
   if (typeof input !== 'string') return ''
   return input.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32)

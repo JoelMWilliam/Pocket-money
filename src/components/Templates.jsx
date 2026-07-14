@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Plus, X, Trash2, LayoutTemplate } from 'lucide-react'
+import { X, Trash2, LayoutTemplate } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR } from '../lib/utils'
+import { getIcon } from '../lib/icons'
 import ModalRoot from './ModalRoot'
 
 const TYPES = [
@@ -10,7 +11,10 @@ const TYPES = [
   { id: 'transfer', name: 'Transfer' }
 ]
 
+import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
+
 export default function Templates({ setScreen }) {
+  useRegisterQuickAdd(() => openNew())
   const { accounts, categories, templates, addTemplate, updateTemplate, deleteTemplate } = useAppStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -84,19 +88,13 @@ export default function Templates({ setScreen }) {
           <p className="text-sm text-on-surface-variant">Quick create</p>
           <h1 className="text-2xl font-bold text-on-surface">Templates</h1>
         </div>
-        <button
-          onClick={openNew}
-          className="rounded-full bg-primary p-3 text-on-primary shadow-lg shadow-primary/20"
-        >
-          <Plus size={22} />
-        </button>
       </header>
 
       <section className="mb-24 space-y-3">
         {templates.map((template) => {
           const category = categories.find((c) => c.id === template.categoryId)
           const account = accounts.find((a) => a.id === template.accountId)
-          const Icon = category?.icon ? LucideIcons[category.icon] : LucideIcons.CircleDollarSign
+          const Icon = category?.icon ? getIcon(category.icon) : getIcon('CircleDollarSign')
           return (
             <div
               key={template.id}
@@ -126,7 +124,7 @@ export default function Templates({ setScreen }) {
                 </button>
                 <button
                   onClick={() => openEdit(template)}
-                  className="rounded-xl border border-outline-variant bg-black px-4 py-2 text-xs font-medium text-on-surface"
+                  className="rounded-xl border border-outline-variant bg-surface px-4 py-2 text-xs font-medium text-on-surface"
                 >
                   Edit
                 </button>
@@ -170,13 +168,13 @@ export default function Templates({ setScreen }) {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Template name"
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
               />
               <div className="grid grid-cols-2 gap-3">
                 <select
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 >
                   {TYPES.map((t) => (
                     <option key={t.id} value={t.id}>{t.name}</option>
@@ -189,14 +187,14 @@ export default function Templates({ setScreen }) {
                   value={form.amount}
                   onChange={(e) => setForm({ ...form, amount: e.target.value })}
                   placeholder="Amount"
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <select
                   value={form.accountId}
                   onChange={(e) => setForm({ ...form, accountId: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 >
                   {accounts.map((a) => (
                     <option key={a.id} value={a.id}>{a.name}</option>
@@ -205,7 +203,7 @@ export default function Templates({ setScreen }) {
                 <select
                   value={form.categoryId}
                   onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
                 >
                   {categories
                     .filter((c) => c.type === form.type)
@@ -218,7 +216,7 @@ export default function Templates({ setScreen }) {
                 value={form.note}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
                 placeholder="Note"
-                className="w-full rounded-xl border border-outline-variant bg-black px-4 py-3 text-on-surface"
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-on-surface"
               />
             </div>
 
