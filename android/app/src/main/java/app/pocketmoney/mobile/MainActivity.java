@@ -14,6 +14,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         // that are silently ignored.
         registerPlugin(SmsPlugin.class);
         registerPlugin(SocialLoginPlugin.class);
+        registerPlugin(NotificationListenerPlugin.class);
         super.onCreate(savedInstanceState);
         WebView.setWebContentsDebuggingEnabled(true);
     }

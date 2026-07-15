@@ -22,6 +22,7 @@ import Loans from './components/Loans'
 import Receipts from './components/Receipts'
 import QuickAddButton from './components/QuickAddButton'
 import AddTransaction from './components/AddTransaction'
+import ReceiptScanner from './components/ReceiptScanner'
 
 import Categories from './components/Categories'
 import Templates from './components/Templates'
@@ -63,6 +64,7 @@ const HOME_SCREEN = 'dashboard'
 export default function App() {
   const [screen, setScreen] = useState(HOME_SCREEN)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [receiptOpen, setReceiptOpen] = useState(false)
   const [rehydrated, setRehydrated] = useState(false)
   const [exitConfirm, setExitConfirm] = useState(false)
   const historyRef = useRef([HOME_SCREEN])
@@ -263,6 +265,7 @@ export default function App() {
       <QuickAddButton />
       <BottomNav current={screen} onChange={setScreen} />
       {quickAddOpen && <AddTransaction onClose={() => setQuickAddOpen(false)} />}
+      {receiptOpen && <ReceiptScanner onClose={() => setReceiptOpen(false)} />}
       {exitConfirm && (
         <div className="pointer-events-none fixed bottom-24 left-0 right-0 z-50 flex justify-center">
           <div className="rounded-full bg-surface px-4 py-2 text-xs text-on-surface shadow-lg">
