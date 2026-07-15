@@ -344,10 +344,10 @@ export default function Onboarding({ onComplete }) {
   }
 
   const ThemeScreen = () => (
-    <div className="animate-slide-up flex min-h-[100dvh] flex-col justify-center bg-surface px-6 py-12">
+    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
       {renderProgress()}
-      <div className="mx-auto w-full max-w-sm">
-        <div className="mb-8 text-center">
+      <div className="mx-auto flex h-full w-full max-w-sm flex-col">
+        <div className="mb-4 shrink-0 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-container">
             <Palette size={32} className="text-primary" />
           </div>
@@ -424,9 +424,9 @@ export default function Onboarding({ onComplete }) {
   )
 
   const ChoiceScreen = () => (
-    <div className="animate-slide-up flex min-h-[100dvh] flex-col justify-center bg-surface px-6 py-12">
+    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
       {renderProgress()}
-      <div className="mx-auto w-full max-w-sm">
+      <div className="mx-auto flex h-full w-full max-w-sm flex-col">
         <h2 className="text-center text-3xl font-bold text-on-surface">Choose your vault</h2>
         <p className="mt-2 text-center text-sm text-on-surface-variant">
           You can change this anytime in Settings.
@@ -475,20 +475,20 @@ export default function Onboarding({ onComplete }) {
   )
 
   const ProfileScreen = () => (
-    <div className="animate-slide-up flex min-h-[100dvh] flex-col items-center justify-center bg-surface px-6 py-12">
+    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
       {renderProgress()}
-      <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-container">
-            <User size={32} className="text-primary" />
+      <div className="mx-auto flex h-full w-full max-w-sm flex-col">
+        <div className="mb-4 shrink-0 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-container">
+            <User size={28} className="text-primary" />
           </div>
-          <h2 className="text-2xl font-bold text-on-surface">Create your profile</h2>
-          <p className="mt-2 text-sm text-on-surface-variant">
+          <h2 className="text-xl font-bold text-on-surface">Create your profile</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
             {googleAuth ? 'Set a name and PIN for this device.' : 'Set up your local account.'}
           </p>
         </div>
 
-        <form onSubmit={handleCreate} className="space-y-4">
+        <form onSubmit={handleCreate} className="flex flex-1 flex-col space-y-4 overflow-y-auto pr-1">
           <div className="flex justify-center">
             <AvatarPicker value={avatar} onChange={setAvatar} size={96} />
           </div>
@@ -581,20 +581,20 @@ export default function Onboarding({ onComplete }) {
     }))
 
     return (
-      <div className="animate-slide-up flex min-h-[100dvh] flex-col bg-surface px-6 py-12">
+      <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
         {renderProgress()}
-        <div className="mx-auto w-full max-w-sm">
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-container">
-              <PieChart size={32} className="text-primary" />
+        <div className="mx-auto flex h-full w-full max-w-sm flex-col">
+          <div className="mb-4 shrink-0 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-container">
+              <PieChart size={28} className="text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-on-surface">Pick your categories</h2>
-            <p className="mt-2 text-sm text-on-surface-variant">
+            <h2 className="text-xl font-bold text-on-surface">Pick your categories</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
               We'll keep the ones you select. You can always add more later.
             </p>
           </div>
 
-          <div className="mb-4 flex-1 space-y-5 overflow-y-auto pr-1">
+          <div className="flex-1 space-y-4 overflow-y-auto pr-1">
             {grouped.map((group) => (
               <div key={group.id}>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">{group.label}</p>
@@ -623,108 +623,108 @@ export default function Onboarding({ onComplete }) {
             ))}
           </div>
 
-          {!showCustomCategory ? (
-            <button
-              onClick={() => setShowCustomCategory(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-outline-variant bg-surface py-3 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-bright"
-            >
-              <Plus size={18} />
-              Add custom category
-            </button>
-          ) : (
-            <form onSubmit={handleAddCustomCategory} className="rounded-2xl border border-outline-variant bg-surface p-4">
-              <input
-                value={customCategory.name}
-                onChange={(e) => setCustomCategory({ ...customCategory, name: e.target.value })}
-                placeholder="Category name"
-                className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
-              />
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <select
-                  value={customCategory.type}
-                  onChange={(e) => {
-                    const type = e.target.value
-                    setCustomCategory({
-                      ...customCategory,
-                      type,
-                      icon: CATEGORY_ICON_MAP[type],
-                      color: TYPE_COLORS[type]
-                    })
-                  }}
+          <div className="shrink-0 space-y-3 pt-3">
+            {!showCustomCategory ? (
+              <button
+                onClick={() => setShowCustomCategory(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-outline-variant bg-surface py-3 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-bright"
+              >
+                <Plus size={18} />
+                Add custom category
+              </button>
+            ) : (
+              <form onSubmit={handleAddCustomCategory} className="rounded-2xl border border-outline-variant bg-surface p-4">
+                <input
+                  value={customCategory.name}
+                  onChange={(e) => setCustomCategory({ ...customCategory, name: e.target.value })}
+                  placeholder="Category name"
                   className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
-                >
-                  {CATEGORY_TYPES.map((t) => (
-                    <option key={t.id} value={t.id}>{t.label}</option>
+                />
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <select
+                    value={customCategory.type}
+                    onChange={(e) => {
+                      const type = e.target.value
+                      setCustomCategory({
+                        ...customCategory,
+                        type,
+                        icon: CATEGORY_ICON_MAP[type],
+                        color: TYPE_COLORS[type]
+                      })
+                    }}
+                    className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
+                  >
+                    {CATEGORY_TYPES.map((t) => (
+                      <option key={t.id} value={t.id}>{t.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={customCategory.icon}
+                    onChange={(e) => setCustomCategory({ ...customCategory, icon: e.target.value })}
+                    className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
+                  >
+                    {ICON_NAMES.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setCustomCategory({ ...customCategory, color: c.value })}
+                      className={`h-6 w-6 rounded-full border-2 ${customCategory.color === c.value ? 'border-white' : 'border-transparent'}`}
+                      style={{ backgroundColor: c.value }}
+                    />
                   ))}
-                </select>
-                <select
-                  value={customCategory.icon}
-                  onChange={(e) => setCustomCategory({ ...customCategory, icon: e.target.value })}
-                  className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
-                >
-                  {ICON_NAMES.map((n) => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {PRESET_COLORS.map((c) => (
+                </div>
+                <div className="mt-3 flex gap-2">
                   <button
-                    key={c.value}
                     type="button"
-                    onClick={() => setCustomCategory({ ...customCategory, color: c.value })}
-                    className={`h-6 w-6 rounded-full border-2 ${customCategory.color === c.value ? 'border-white' : 'border-transparent'}`}
-                    style={{ backgroundColor: c.value }}
-                  />
-                ))}
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCustomCategory(false)}
-                  className="flex-1 rounded-xl bg-surface-variant py-2 text-sm font-medium text-on-surface"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 rounded-xl bg-primary py-2 text-sm font-semibold text-on-primary"
-                >
-                  Add
-                </button>
-              </div>
-            </form>
-          )}
+                    onClick={() => setShowCustomCategory(false)}
+                    className="flex-1 rounded-xl bg-surface-variant py-2 text-sm font-medium text-on-surface"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 rounded-xl bg-primary py-2 text-sm font-semibold text-on-primary"
+                  >
+                    Add
+                  </button>
+                </div>
+              </form>
+            )}
 
-          <button
-            onClick={handleCategoriesContinue}
-            className="mt-6 w-full rounded-2xl bg-primary py-4 text-base font-semibold text-on-primary"
-          >
-            Continue
-          </button>
+            <button
+              onClick={handleCategoriesContinue}
+              className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-on-primary"
+            >
+              Continue
+            </button>
+          </div>
         </div>
       </div>
     )
   }
 
   const AccountsScreen = () => {
-    const TypeIcon = ACCOUNT_TYPES.find((t) => t.id === accountForm.type)?.icon || Building2
-
     return (
-      <div className="animate-slide-up flex min-h-[100dvh] flex-col bg-surface px-6 py-12">
+      <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
         {renderProgress()}
-        <div className="mx-auto w-full max-w-sm">
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-container">
-              <Building2 size={32} className="text-primary" />
+        <div className="mx-auto flex h-full w-full max-w-sm flex-col">
+          <div className="mb-4 shrink-0 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-container">
+              <Building2 size={28} className="text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-on-surface">Add your accounts</h2>
-            <p className="mt-2 text-sm text-on-surface-variant">
-              Add at least one account or card so SMS import can map transactions correctly.
+            <h2 className="text-xl font-bold text-on-surface">Add your accounts</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              Add at least one account or card so SMS import can map transactions.
             </p>
           </div>
 
-          <div className="mb-4 flex-1 space-y-3 overflow-y-auto pr-1">
+          <div className="flex-1 space-y-3 overflow-y-auto pr-1">
             {storeAccounts.length === 0 && (
               <p className="text-center text-sm text-on-surface-variant py-4">No accounts yet. Add your first one below.</p>
             )}
@@ -752,66 +752,68 @@ export default function Onboarding({ onComplete }) {
             })}
           </div>
 
-          <form onSubmit={handleAddAccount} className="rounded-2xl border border-outline-variant bg-surface p-4">
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                value={accountForm.name}
-                onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
-                placeholder="Account name"
-                className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
-              />
-              <select
-                value={accountForm.type}
-                onChange={(e) => setAccountForm({ ...accountForm, type: e.target.value })}
-                className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
+          <div className="shrink-0 space-y-3 pt-3">
+            <form onSubmit={handleAddAccount} className="rounded-2xl border border-outline-variant bg-surface p-4">
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  value={accountForm.name}
+                  onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
+                  placeholder="Account name"
+                  className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
+                />
+                <select
+                  value={accountForm.type}
+                  onChange={(e) => setAccountForm({ ...accountForm, type: e.target.value })}
+                  className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
+                >
+                  {ACCOUNT_TYPES.map((t) => (
+                    <option key={t.id} value={t.id}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={accountForm.balance}
+                  onChange={(e) => setAccountForm({ ...accountForm, balance: e.target.value })}
+                  placeholder="Current balance"
+                  className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
+                />
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={20}
+                  value={accountForm.accountNumber}
+                  onChange={(e) => setAccountForm({ ...accountForm, accountNumber: e.target.value.replace(/[^\d\s]/g, '') })}
+                  placeholder="Card / account number"
+                  className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
+                />
+              </div>
+              <button
+                type="submit"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary"
               >
-                {ACCOUNT_TYPES.map((t) => (
-                  <option key={t.id} value={t.id}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <input
-                type="number"
-                step="0.01"
-                value={accountForm.balance}
-                onChange={(e) => setAccountForm({ ...accountForm, balance: e.target.value })}
-                placeholder="Current balance"
-                className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
-              />
-              <input
-                type="password"
-                inputMode="numeric"
-                maxLength={20}
-                value={accountForm.accountNumber}
-                onChange={(e) => setAccountForm({ ...accountForm, accountNumber: e.target.value.replace(/[^\d\s]/g, '') })}
-                placeholder="Card / account number"
-                className="w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-sm text-on-surface"
-              />
-            </div>
-            <button
-              type="submit"
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary"
-            >
-              <Plus size={18} />
-              Add account
-            </button>
-          </form>
+                <Plus size={18} />
+                Add account
+              </button>
+            </form>
 
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={() => nextScreen('goal')}
-              className="flex-1 rounded-2xl border border-outline-variant bg-surface py-4 text-base font-semibold text-on-surface"
-            >
-              Skip
-            </button>
-            <button
-              onClick={() => nextScreen('goal')}
-              disabled={storeAccounts.length === 0}
-              className="flex-1 rounded-2xl bg-primary py-4 text-base font-semibold text-on-primary disabled:opacity-50"
-            >
-              Continue
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => nextScreen('goal')}
+                className="flex-1 rounded-2xl border border-outline-variant bg-surface py-4 text-base font-semibold text-on-surface"
+              >
+                Skip
+              </button>
+              <button
+                onClick={() => nextScreen('goal')}
+                disabled={storeAccounts.length === 0}
+                className="flex-1 rounded-2xl bg-primary py-4 text-base font-semibold text-on-primary disabled:opacity-50"
+              >
+                Continue
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -819,20 +821,20 @@ export default function Onboarding({ onComplete }) {
   }
 
   const GoalScreen = () => (
-    <div className="animate-slide-up flex min-h-[100dvh] flex-col justify-center bg-surface px-6 py-12">
+    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
       {renderProgress()}
-      <div className="mx-auto w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-container">
-            <Target size={32} className="text-primary" />
+      <div className="mx-auto flex h-full w-full max-w-sm flex-col">
+        <div className="mb-4 shrink-0 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-container">
+            <Target size={28} className="text-primary" />
           </div>
-          <h2 className="text-2xl font-bold text-on-surface">What brings you here?</h2>
-          <p className="mt-2 text-sm text-on-surface-variant">
+          <h2 className="text-xl font-bold text-on-surface">What brings you here?</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
             We'll tailor the dashboard to your goal.
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="flex-1 space-y-3 overflow-y-auto pr-1">
           {GOALS.map((g) => {
             const Icon = g.icon
             const selected = g.id === goal
@@ -859,12 +861,14 @@ export default function Onboarding({ onComplete }) {
           })}
         </div>
 
-        <button
-          onClick={() => nextScreen('permissions')}
-          className="mt-8 w-full rounded-2xl bg-primary py-4 text-base font-semibold text-on-primary"
-        >
-          Continue
-        </button>
+        <div className="shrink-0 pt-3">
+          <button
+            onClick={() => nextScreen('permissions')}
+            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-on-primary"
+          >
+            Continue
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -955,7 +959,7 @@ function PermissionsScreen({ onFinish }) {
   }
 
   return (
-    <div className="animate-slide-up flex min-h-[100dvh] flex-col justify-center bg-surface px-6 py-12">
+    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
       <div className="absolute top-0 left-0 right-0 z-10 px-6 pt-6">
         <div className="flex items-center justify-between gap-2">
           {Array.from({ length: 10 }).map((_, i) => (
@@ -968,8 +972,8 @@ function PermissionsScreen({ onFinish }) {
           ))}
         </div>
       </div>
-      <div className="mx-auto w-full max-w-sm">
-        <div className="mb-6 text-center">
+      <div className="mx-auto flex h-full w-full max-w-sm flex-col">
+        <div className="mb-4 shrink-0 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-container">
             <Bell size={32} className="text-primary" />
           </div>
