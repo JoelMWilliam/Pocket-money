@@ -89,6 +89,7 @@ export default function Onboarding({ onComplete }) {
   const [goal, setGoal] = useState('track')
   const [biometricAvailable, setBiometricAvailable] = useState(false)
   const [biometricEnabled, setBiometricEnabled] = useState(false)
+  const [biometricStatus, setBiometricStatus] = useState('')
   const [isDark, setIsDark] = useState(true)
   const [seedColor, setSeedColor] = useState('#0A84FF')
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([])
@@ -181,7 +182,9 @@ export default function Onboarding({ onComplete }) {
       if (biometricEnabled) {
         try {
           await useAppStore.getState().enableBiometric()
+          setBiometricStatus('enabled')
         } catch (err) {
+          setBiometricStatus('failed')
           setError('Biometric setup failed: ' + (err.message || 'unknown error') + '. You can enable it later in Settings.')
         }
       }
@@ -194,7 +197,7 @@ export default function Onboarding({ onComplete }) {
   }
 
   const handleCategoryToggle = (id) => {
-    setSelectedCategoryIds((prev) =
+    setSelectedCategoryIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     )
   }
@@ -249,6 +252,12 @@ export default function Onboarding({ onComplete }) {
   const finishOnboarding = async () => {
     useAppStore.getState().updateSettings({ onboardingComplete: true })
     await storageSet('first-boot-permissions', true)
+    try {
+      const { maybeAutoImportSms } = await import('../lib/sms')
+      await maybeAutoImportSms(useAppStore.getState())
+    } catch (err) {
+      console.warn('Post-onboarding SMS import failed', err)
+    }
     onComplete?.()
   }
 
@@ -271,7 +280,7 @@ export default function Onboarding({ onComplete }) {
   )
 
   const WelcomeScreen = () => (
-    <div className="animate-fade-in flex min-h-full flex-col items-center justify-center bg-surface px-6 py-12 text-center">
+    <div className="animate-fade-in flex min-h-[100dvh] flex-col items-center justify-center bg-surface px-6 py-12 text-center">
       <div className="mb-8 inline-flex h-32 w-32 items-center justify-center rounded-[2rem] bg-gradient-to-br from-primary to-tertiary shadow-2xl shadow-primary/20">
         <Wallet size={64} className="text-black" />
       </div>
@@ -293,7 +302,7 @@ export default function Onboarding({ onComplete }) {
     const prop = VALUE_PROPS[valueIndex]
     const Icon = prop.icon
     return (
-      <div className="animate-slide-up flex min-h-full flex-col justify-between bg-surface px-6 py-12">
+      <div className="animate-slide-up flex min-h-[100dvh] flex-col justify-between bg-surface px-6 py-12">
         {renderProgress()}
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           <div
@@ -335,7 +344,7 @@ export default function Onboarding({ onComplete }) {
   }
 
   const ThemeScreen = () => (
-    <div className="animate-slide-up flex min-h-full flex-col justify-center bg-surface px-6 py-12">
+    <div className="animate-slide-up flex min-h-[100dvh] flex-col justify-center bg-surface px-6 py-12">
       {renderProgress()}
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-8 text-center">
@@ -415,7 +424,7 @@ export default function Onboarding({ onComplete }) {
   )
 
   const ChoiceScreen = () => (
-    <div className="animate-slide-up flex min-h-full flex-col justify-center bg-surface px-6 py-12">
+    <div className="animate-slide-up flex min-h-[100dvh] flex-col justify-center bg-surface px-6 py-12">
       {renderProgress()}
       <div className="mx-auto w-full max-w-sm">
         <h2 className="text-center text-3xl font-bold text-on-surface">Choose your vault</h2>
@@ -466,7 +475,7 @@ export default function Onboarding({ onComplete }) {
   )
 
   const ProfileScreen = () => (
-    <div className="animate-slide-up flex min-h-full flex-col items-center justify-center bg-surface px-6 py-12">
+    <div className="animate-slide-up flex min-h-[100dvh] flex-col items-center justify-center bg-surface px-6 py-12">
       {renderProgress()}
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
@@ -527,6 +536,13 @@ export default function Onboarding({ onComplete }) {
             </label>
           )}
 
+          {biometricStatus === 'enabled' && (
+            <p className="text-center text-sm text-green-500">Biometric enabled successfully</p>
+          )}
+          {biometricStatus === 'failed' && (
+            <p className="text-center text-sm text-error">Biometric setup failed - you can enable it later in Settings</p>
+          )}
+
           <label className="flex items-center gap-3 text-sm text-on-surface-variant">
             <input
               type="checkbox"
@@ -565,7 +581,7 @@ export default function Onboarding({ onComplete }) {
     }))
 
     return (
-      <div className="animate-slide-up flex min-h-full flex-col bg-surface px-6 py-12">
+      <div className="animate-slide-up flex min-h-[100dvh] flex-col bg-surface px-6 py-12">
         {renderProgress()}
         <div className="mx-auto w-full max-w-sm">
           <div className="mb-6 text-center">
@@ -578,11 +594,11 @@ export default function Onboarding({ onComplete }) {
             </p>
           </div>
 
-          <div className="mb-4 max-h-[50vh] space-y-5 overflow-y-auto pr-1 no-scrollbar">
+          <div className="mb-4 flex-1 space-y-5 overflow-y-auto pr-1">
             {grouped.map((group) => (
               <div key={group.id}>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">{group.label}</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {group.items.map((c) => {
                     const Icon = getIcon(c.icon)
                     const selected = selectedCategoryIds.includes(c.id)
@@ -590,14 +606,15 @@ export default function Onboarding({ onComplete }) {
                       <button
                         key={c.id}
                         onClick={() => handleCategoryToggle(c.id)}
-                        className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-all ${
+                        className={`flex items-center gap-2 rounded-xl border px-3 py-3 text-sm font-medium transition-all ${
                           selected
-                            ? 'border-primary bg-primary-container/20 text-primary'
+                            ? 'border-primary bg-primary-container/30 text-primary'
                             : 'border-outline-variant bg-surface text-on-surface-variant'
                         }`}
                       >
-                        <Icon size={14} />
-                        {c.name}
+                        <Icon size={16} />
+                        <span className="flex-1 text-left">{c.name}</span>
+                        {selected && <Check size={16} className="text-primary" />}
                       </button>
                     )
                   })}
@@ -694,7 +711,7 @@ export default function Onboarding({ onComplete }) {
     const TypeIcon = ACCOUNT_TYPES.find((t) => t.id === accountForm.type)?.icon || Building2
 
     return (
-      <div className="animate-slide-up flex min-h-full flex-col bg-surface px-6 py-12">
+      <div className="animate-slide-up flex min-h-[100dvh] flex-col bg-surface px-6 py-12">
         {renderProgress()}
         <div className="mx-auto w-full max-w-sm">
           <div className="mb-6 text-center">
@@ -707,9 +724,9 @@ export default function Onboarding({ onComplete }) {
             </p>
           </div>
 
-          <div className="mb-4 max-h-[28vh] space-y-3 overflow-y-auto pr-1 no-scrollbar">
+          <div className="mb-4 flex-1 space-y-3 overflow-y-auto pr-1">
             {storeAccounts.length === 0 && (
-              <p className="text-center text-sm text-on-surface-variant">No accounts yet. Add your first one below.</p>
+              <p className="text-center text-sm text-on-surface-variant py-4">No accounts yet. Add your first one below.</p>
             )}
             {storeAccounts.map((a) => {
               const Icon = getIcon(a.icon, Building2)
@@ -802,7 +819,7 @@ export default function Onboarding({ onComplete }) {
   }
 
   const GoalScreen = () => (
-    <div className="animate-slide-up flex min-h-full flex-col justify-center bg-surface px-6 py-12">
+    <div className="animate-slide-up flex min-h-[100dvh] flex-col justify-center bg-surface px-6 py-12">
       {renderProgress()}
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-8 text-center">
@@ -853,7 +870,7 @@ export default function Onboarding({ onComplete }) {
   )
 
   const SuccessScreen = () => (
-    <div className="animate-fade-in flex min-h-full flex-col items-center justify-center bg-surface px-6 py-12 text-center">
+    <div className="animate-fade-in flex min-h-[100dvh] flex-col items-center justify-center bg-surface px-6 py-12 text-center">
       <div className="mb-8 inline-flex h-32 w-32 items-center justify-center rounded-[2rem] bg-primary-container">
         <Sparkles size={56} className="text-primary" />
       </div>
@@ -871,15 +888,15 @@ export default function Onboarding({ onComplete }) {
     </div>
   )
 
-  if (screen === 'welcome') return <WelcomeScreen />
-  if (screen === 'values') return <ValuesScreen />
-  if (screen === 'theme') return <ThemeScreen />
-  if (screen === 'choice') return <ChoiceScreen />
-  if (screen === 'profile') return <ProfileScreen />
-  if (screen === 'categories') return <CategoriesScreen />
-  if (screen === 'accounts') return <AccountsScreen />
-  if (screen === 'goal') return <GoalScreen />
-  if (screen === 'success') return <SuccessScreen />
+  if (screen === 'welcome') return WelcomeScreen()
+  if (screen === 'values') return ValuesScreen()
+  if (screen === 'theme') return ThemeScreen()
+  if (screen === 'choice') return ChoiceScreen()
+  if (screen === 'profile') return ProfileScreen()
+  if (screen === 'categories') return CategoriesScreen()
+  if (screen === 'accounts') return AccountsScreen()
+  if (screen === 'goal') return GoalScreen()
+  if (screen === 'success') return SuccessScreen()
 
   return (
     <PermissionsScreen
@@ -938,7 +955,7 @@ function PermissionsScreen({ onFinish }) {
   }
 
   return (
-    <div className="animate-slide-up flex min-h-full flex-col justify-center bg-surface px-6 py-12">
+    <div className="animate-slide-up flex min-h-[100dvh] flex-col justify-center bg-surface px-6 py-12">
       <div className="absolute top-0 left-0 right-0 z-10 px-6 pt-6">
         <div className="flex items-center justify-between gap-2">
           {Array.from({ length: 10 }).map((_, i) => (
