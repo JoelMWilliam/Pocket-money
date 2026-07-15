@@ -30,6 +30,7 @@ import ImportCSV from './components/ImportCSV'
 import AdvancedReports from './components/AdvancedReports'
 import CashFlow from './components/CashFlow'
 import Assistant from './components/Assistant'
+import DailyReport from './components/DailyReport'
 import { maybeAutoImportSms } from './lib/sms'
 import { isGoogleDriveConfigured, initializeGoogleAuth } from './lib/googleDrive'
 
@@ -53,6 +54,7 @@ const SCREENS = {
   import: ImportCSV,
   categories: Categories,
   assistant: Assistant,
+  dailyreport: DailyReport,
   settings: Settings
 }
 
@@ -74,6 +76,17 @@ export default function App() {
 
   useEffect(() => {
     registerActivityListeners()
+  }, [])
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    let removeListener = null
+    CapApp.addListener('appUrlOpen', (event) => {
+      if (event.url && event.url.includes('dailyreport')) {
+        setScreen('dailyreport')
+      }
+    }).then((l) => { removeListener = l })
+    return () => { if (removeListener) removeListener.remove() }
   }, [])
 
   useEffect(() => {

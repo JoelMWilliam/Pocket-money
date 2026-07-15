@@ -41,7 +41,7 @@ import { cloudAuth } from '../lib/api'
 import { exportPDFReport } from '../lib/pdf'
 import { buildEmailReport, sendEmailReport } from '../lib/email'
 import { canUseBiometrics } from '../lib/biometric'
-import { requestNotificationPermission, scheduleDailyReminder, cancelAllNotifications } from '../lib/notifications'
+import { requestNotificationPermission, scheduleDailyReminder, scheduleReportNotification, cancelAllNotifications } from '../lib/notifications'
 import { maybeAutoImportSms } from '../lib/sms'
 import { RegisterModal } from './ModalRoot'
 import AvatarPicker from './AvatarPicker'
@@ -114,7 +114,7 @@ export default function Settings() {
     } else {
       const granted = await requestNotificationPermission()
       if (granted) {
-        await scheduleDailyReminder(999999, 'Pocket Money', 'Log today\'s transactions before bed.', 20, 0)
+        await scheduleReportNotification(20, 0)
         updateSettings({ notificationsEnabled: true })
         alert('Daily reminder enabled at 8:00 PM.')
       } else {

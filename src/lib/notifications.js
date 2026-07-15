@@ -52,10 +52,25 @@ export async function scheduleDailyReminder(id, title, body, hour = 20, minute =
         title,
         body,
         schedule: { on: { hour, minute } },
-        extra: { recurring: true }
+        extra: { recurring: true, report: true },
+        android: {
+          channelId: 'daily-report',
+          smallIcon: 'ic_stat_icon',
+          largeIcon: 'ic_launcher',
+          color: 0x0A84FF,
+          actionTitle: 'View Report',
+          actionId: 'view-report'
+        }
       }
     ]
   })
+  return true
+}
+
+export async function scheduleReportNotification(hour = 20, minute = 0) {
+  if (!IS_NATIVE) return false
+  await cancelNotifications([999999])
+  await scheduleDailyReminder(999999, 'Your Daily Summary', 'Tap to see your spending report for today.', hour, minute)
   return true
 }
 

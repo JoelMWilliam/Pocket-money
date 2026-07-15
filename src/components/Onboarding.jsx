@@ -9,7 +9,7 @@ import { useAppStore } from '../store/useAppStore'
 import AvatarPicker from './AvatarPicker'
 import { signInToGoogleDrive } from '../lib/googleDrive'
 import { requestSmsPermission, checkSmsPermission } from '../lib/sms'
-import { requestNotificationPermission, scheduleDailyReminder } from '../lib/notifications'
+import { requestNotificationPermission, scheduleDailyReminder, scheduleReportNotification } from '../lib/notifications'
 import { storageSet } from '../lib/storage'
 import { canUseBiometrics } from '../lib/biometric'
 import { useTheme } from '../hooks/useTheme'
@@ -941,7 +941,7 @@ function PermissionsScreen({ onFinish }) {
     const granted = await requestNotificationPermission()
     setNotificationsEnabled(granted)
     if (granted) {
-      await scheduleDailyReminder(999999, 'Pocket Money', "Log today's transactions before bed.", 20, 0)
+      await scheduleReportNotification(20, 0)
     }
   }
 
