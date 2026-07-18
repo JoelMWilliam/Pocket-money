@@ -1,18 +1,6 @@
 import { useState, useMemo } from 'react'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  CartesianGrid,
-  Area,
-  AreaChart,
-  Sankey
-} from 'recharts'
+import { Sankey, Tooltip as RTooltip, ResponsiveContainer } from 'recharts'
+import { AppleAreaChart, AppleLineChart, AppleMultiBarChart, PremiumTooltip } from './ChartKit'
 import { Calendar, Store, TrendingUp, PieChart as PieChartIcon, Target } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, getCurrentMonth } from '../lib/utils'
@@ -163,8 +151,8 @@ export default function AdvancedReports() {
   }, [categoryTotals, incomeTotal])
 
   const renderSankey = () => (
-    <div className="rounded-2xl bg-surface p-4 border border-outline-variant">
-      <h2 className="mb-2 text-base font-semibold text-on-surface">Income → Expenses Flow</h2>
+    <div className="rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
+      <h2 className="mb-3 text-base font-semibold text-on-surface">Income → Expenses Flow</h2>
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           <Sankey
@@ -174,14 +162,7 @@ export default function AdvancedReports() {
             nodeWidth={10}
             iterations={64}
           >
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #38383a',
-                borderRadius: '12px',
-                color: '#e3e3e3'
-              }}
-            />
+            <RTooltip content={<PremiumTooltip formatter={(v) => formatLKR(v)} />} />
           </Sankey>
         </ResponsiveContainer>
       </div>
@@ -189,32 +170,16 @@ export default function AdvancedReports() {
   )
 
   const renderForecast = () => (
-    <div className="rounded-2xl bg-surface p-4 border border-outline-variant">
-      <h2 className="mb-2 text-base font-semibold text-on-surface">6-Month Cash Flow Forecast</h2>
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={cashFlowForecast}>
-            <defs>
-              <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--md-sys-color-primary)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="var(--md-sys-color-primary)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis dataKey="month" stroke="#8e8e93" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis stroke="#8e8e93" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `LKR ${(v / 1000).toFixed(0)}k`} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #38383a',
-                borderRadius: '12px',
-                color: '#e3e3e3'
-              }}
-              formatter={(value) => formatLKR(value)}
-            />
-            <Area type="monotone" dataKey="balance" stroke="var(--md-sys-color-primary)" fillOpacity={1} fill="url(#colorBalance)" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
+      <h2 className="mb-3 text-base font-semibold text-on-surface">6-Month Cash Flow Forecast</h2>
+      <AppleAreaChart
+        data={cashFlowForecast}
+        dataKey="balance"
+        xKey="month"
+        height={220}
+        color="var(--md-sys-color-primary)"
+        formatValue={(v) => formatLKR(v)}
+      />
     </div>
   )
 
@@ -263,51 +228,31 @@ export default function AdvancedReports() {
   }
 
   const renderNetWorth = () => (
-    <div className="rounded-2xl bg-surface p-4 border border-outline-variant">
-      <h2 className="mb-2 text-base font-semibold text-on-surface">Net Worth History</h2>
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={netWorthHistory}>
-            <XAxis dataKey="month" stroke="#8e8e93" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis stroke="#8e8e93" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `LKR ${(v / 1000).toFixed(0)}k`} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #38383a',
-                borderRadius: '12px',
-                color: '#e3e3e3'
-              }}
-              formatter={(value) => formatLKR(value)}
-            />
-            <Line type="monotone" dataKey="netWorth" stroke="var(--md-sys-color-primary)" strokeWidth={3} dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
+      <h2 className="mb-3 text-base font-semibold text-on-surface">Net Worth History</h2>
+      <AppleLineChart
+        data={netWorthHistory}
+        height={220}
+        xKey="month"
+        series={[{ key: 'netWorth', name: 'Net Worth', color: 'var(--md-sys-color-primary)' }]}
+        formatValue={(v) => formatLKR(v)}
+      />
     </div>
   )
 
   const renderBudgetActual = () => (
-    <div className="rounded-2xl bg-surface p-4 border border-outline-variant">
-      <h2 className="mb-2 text-base font-semibold text-on-surface">Budget vs Actual</h2>
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={budgetVsActual}>
-            <XAxis dataKey="name" stroke="#8e8e93" fontSize={10} tickLine={false} axisLine={false} />
-            <YAxis stroke="#8e8e93" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `LKR ${(v / 1000).toFixed(0)}k`} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #38383a',
-                borderRadius: '12px',
-                color: '#e3e3e3'
-              }}
-              formatter={(value) => formatLKR(value)}
-            />
-            <Bar dataKey="budget" fill="#30D158" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="actual" fill="#FF375F" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
+      <h2 className="mb-3 text-base font-semibold text-on-surface">Budget vs Actual</h2>
+      <AppleMultiBarChart
+        data={budgetVsActual}
+        height={220}
+        xKey="name"
+        series={[
+          { key: 'budget', name: 'Budget', color: '#30D158' },
+          { key: 'actual', name: 'Actual', color: '#FF375F' }
+        ]}
+        formatValue={(v) => formatLKR(v)}
+      />
     </div>
   )
 

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import {
-  ArrowRight, Shield, Cloud, Wallet, Check, Bell, MessageSquare,
-  Smartphone, TrendingUp, Target, Fingerprint, Sparkles, ChevronRight,
+  ArrowRight, Shield, Wallet, Check, Bell, MessageSquare,
+  Smartphone, TrendingUp, Target, Fingerprint, Sparkles,
   CreditCard, PieChart, User, Moon, Sun, Palette, Plus, Trash2,
   Building2, Banknote, Landmark, Landmark as BankIcon
 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import AvatarPicker from './AvatarPicker'
 import { signInToGoogleDrive } from '../lib/googleDrive'
-import { requestSmsPermission, checkSmsPermission } from '../lib/sms'
+import { requestSmsPermission, checkSmsPermission, suggestAccountsFromSms, isNativeSmsAvailable } from '../lib/sms'
 import { requestNotificationPermission, scheduleDailyReminder, scheduleReportNotification } from '../lib/notifications'
 import { storageSet } from '../lib/storage'
 import { canUseBiometrics } from '../lib/biometric'
@@ -17,7 +17,7 @@ import { PRESET_COLORS } from '../lib/theme'
 import { encryptAccountNumber } from '../lib/accountNumber'
 import { getIcon } from '../lib/icons'
 
-const SCREENS = ['welcome', 'values', 'theme', 'choice', 'profile', 'categories', 'accounts', 'goal', 'permissions', 'success']
+const SCREENS = ['welcome', 'values', 'theme', 'choice', 'profile', 'categories', 'smsAccounts', 'accounts', 'goal', 'permissions', 'success']
 
 const VALUE_PROPS = [
   {
@@ -209,7 +209,10 @@ export default function Onboarding({ onComplete }) {
         deleteCategory(c.id)
       }
     }
-    nextScreen('accounts')
+    // Only stop at the SMS-scan screen when SMS is natively available.
+    // Otherwise web/dev users would see a dead screen; skip straight to
+    // manual account entry.
+    nextScreen(isNativeSmsAvailable() ? 'smsAccounts' : 'accounts')
   }
 
   const handleAddCustomCategory = (e) => {
@@ -262,7 +265,7 @@ export default function Onboarding({ onComplete }) {
   }
 
   const renderProgress = () => (
-    <div className="absolute top-0 left-0 right-0 z-10 px-6 pt-6">
+    <div className="safe-top absolute top-0 left-0 right-0 z-10 px-6 pb-2">
       <div className="flex items-center justify-between gap-2">
         {SCREENS.map((s, i) => (
           <div
@@ -273,7 +276,7 @@ export default function Onboarding({ onComplete }) {
           />
         ))}
       </div>
-      <p className="mt-3 text-center text-xs font-medium text-on-surface-variant">
+      <p className="mt-2 text-center text-xs font-medium text-on-surface-variant">
         Step {currentStep} of {totalSteps}
       </p>
     </div>
@@ -344,7 +347,7 @@ export default function Onboarding({ onComplete }) {
   }
 
   const ThemeScreen = () => (
-    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
+    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-20 pb-6">
       {renderProgress()}
       <div className="mx-auto flex h-full w-full max-w-sm flex-col">
         <div className="mb-4 shrink-0 text-center">
@@ -423,59 +426,73 @@ export default function Onboarding({ onComplete }) {
     </div>
   )
 
+  const GoogleGIcon = ({ size = 22 }) => (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+      <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.963 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
+      <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
+      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571.001-.001 6.19 5.238 6.19 5.238C36.971 39.205 44 32 44 24c0-1.341-.138-2.65-.389-3.917z" />
+    </svg>
+  )
+
   const ChoiceScreen = () => (
-    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
+    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-24 pb-10">
       {renderProgress()}
       <div className="mx-auto flex h-full w-full max-w-sm flex-col">
-        <h2 className="text-center text-3xl font-bold text-on-surface">Choose your vault</h2>
-        <p className="mt-2 text-center text-sm text-on-surface-variant">
-          You can change this anytime in Settings.
-        </p>
+        <div className="mb-8 shrink-0 text-center">
+          <h1 className="text-4xl font-bold tracking-tight text-on-surface">Create your account</h1>
+          <p className="mt-3 text-sm text-on-surface-variant">
+            Choose how to secure your vault. You can change this anytime in Settings.
+          </p>
+        </div>
 
-        <div className="mt-10 space-y-4">
-          <button
-            onClick={handleLocal}
-            className="group flex w-full items-center gap-4 rounded-3xl bg-surface p-6 text-left transition-all hover:bg-surface-bright border border-outline-variant"
-          >
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary-container text-primary">
-              <Shield size={32} />
-            </div>
-            <div className="flex-1">
-              <p className="text-lg font-semibold text-on-surface">Local account</p>
-              <p className="text-xs text-on-surface-variant">
-                Everything stays on this device. No cloud, no accounts.
-              </p>
-            </div>
-            <ChevronRight size={20} className="text-on-surface-variant transition-transform group-hover:translate-x-1" />
-          </button>
-
+        <div className="flex-1 flex flex-col justify-center space-y-3">
           <button
             onClick={handleGoogle}
             disabled={loading}
-            className="group flex w-full items-center gap-4 rounded-3xl bg-surface p-6 text-left transition-all hover:bg-surface-bright border border-outline-variant disabled:opacity-50"
+            className="flex w-full items-center gap-4 rounded-2xl bg-surface px-5 py-4 text-left transition-all hover:bg-surface-bright border border-outline-variant active:scale-[0.99] disabled:opacity-50 shadow-sm"
           >
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary-container text-primary">
-              <Cloud size={32} />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white">
+              <GoogleGIcon size={22} />
             </div>
-            <div className="flex-1">
-              <p className="text-lg font-semibold text-on-surface">Back up with Google</p>
-              <p className="text-xs text-on-surface-variant">
-                Sign in with Gmail and auto-backup to Google Drive.
-              </p>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-semibold text-on-surface">Continue with Google</p>
+              <p className="text-xs text-on-surface-variant">Back up to Google Drive automatically</p>
             </div>
-            <ChevronRight size={20} className="text-on-surface-variant transition-transform group-hover:translate-x-1" />
+            <span className="ml-2 inline-flex items-center rounded-full bg-primary-container/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">Sync</span>
           </button>
+
+          <button
+            onClick={handleLocal}
+            className="flex w-full items-center gap-4 rounded-2xl bg-surface px-5 py-4 text-left transition-all hover:bg-surface-bright border border-outline-variant active:scale-[0.99] shadow-sm"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-container text-primary">
+              <Shield size={22} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-semibold text-on-surface">Continue on this device</p>
+              <p className="text-xs text-on-surface-variant">Everything stays local. No cloud, no accounts.</p>
+            </div>
+            <span className="ml-2 inline-flex items-center rounded-full bg-primary-container/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">Private</span>
+          </button>
+
+          {loading && (
+            <p className="pt-2 text-center text-xs text-on-surface-variant">Connecting to Google…</p>
+          )}
+          {error && (
+            <p className="pt-2 text-center text-sm text-error">{error}</p>
+          )}
         </div>
 
-        {error && (
-          <p className="mt-4 text-center text-sm text-error">{error}</p>
-        )}
+        <p className="mt-8 text-center text-xs leading-relaxed text-on-surface-variant/80">
+          By continuing, your financial data stays on this device. Google is only used for backup when you choose it.
+        </p>
       </div>
     </div>
   )
 
   const ProfileScreen = () => (
-    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
+    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-20 pb-6">
       {renderProgress()}
       <div className="mx-auto flex h-full w-full max-w-sm flex-col">
         <div className="mb-4 shrink-0 text-center">
@@ -581,7 +598,7 @@ export default function Onboarding({ onComplete }) {
     }))
 
     return (
-      <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
+      <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-20 pb-6">
         {renderProgress()}
         <div className="mx-auto flex h-full w-full max-w-sm flex-col">
           <div className="mb-4 shrink-0 text-center">
@@ -709,9 +726,154 @@ export default function Onboarding({ onComplete }) {
     )
   }
 
+  const SmsAccountsScreen = () => {
+    const [suggestions, setSuggestions] = useState([])
+    const [loading, setLoading] = useState(false)
+    const [selectedIds, setSelectedIds] = useState(new Set())
+
+    useEffect(() => {
+      let cancelled = false
+      const load = async () => {
+        if (!isNativeSmsAvailable()) {
+          if (!cancelled) nextScreen('accounts')
+          return
+        }
+        setLoading(true)
+        const result = await suggestAccountsFromSms()
+        if (!cancelled) {
+          setSuggestions(result)
+          // Auto-select all by default
+          setSelectedIds(new Set(result.map((s) => s.id)))
+          if (result.length === 0) {
+            // Nothing to suggest — skip straight to manual account entry.
+            nextScreen('accounts')
+            return
+          }
+        }
+        setLoading(false)
+      }
+      load()
+      return () => { cancelled = true }
+    }, [])
+
+    const toggleSelect = (id) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        return next
+      })
+    }
+
+    const handleContinue = async () => {
+      const store = useAppStore.getState()
+      const pinHash = store.auth.users[store.auth.currentUser]?.pinHash
+      for (const s of suggestions) {
+        if (!selectedIds.has(s.id)) continue
+        const name = s.suggestedName || `${s.bank || 'Account'} ${s.hint ? `****${s.hint}` : ''}`
+        const rawNumber = s.hint ? `****${s.hint}` : ''
+        // Store both an encrypted hint (for legacy matching) and a structured
+        // accountNumberHint object (last4/first4) so the matcher can resolve
+        // SMS to this account without decrypting on every import.
+        const lastDigits = s.hint ? String(s.hint).replace(/\D/g, '').slice(-4) : null
+        const accountNumberHint = lastDigits ? { last4: lastDigits } : null
+        store.addAccount({
+          name,
+          type: s.type || 'bank',
+          bankId: s.bankId || null,
+          balance: 0,
+          currency: 'LKR',
+          color: '#0A84FF',
+          icon: 'Building2',
+          accountNumberHint,
+          accountNumberEncrypted: rawNumber ? await encryptAccountNumber(rawNumber, pinHash) : null
+        })
+      }
+      nextScreen('accounts')
+    }
+
+    return (
+      <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-20 pb-6">
+        {renderProgress()}
+        <div className="mx-auto flex h-full w-full max-w-sm flex-col">
+          <div className="mb-4 shrink-0 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-container">
+              <MessageSquare size={28} className="text-primary" />
+            </div>
+            <h2 className="text-xl font-bold text-on-surface">Found accounts in SMS</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              We detected these accounts from your bank messages. Select the ones to add.
+            </p>
+          </div>
+
+          <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin h-8 w-8 border-3 border-primary border-t-transparent rounded-full" />
+                <p className="ml-3 text-sm text-on-surface-variant">Scanning messages...</p>
+              </div>
+            ) : suggestions.length === 0 ? (
+              <div className="text-center py-8">
+                <MessageSquare size={48} className="mx-auto text-on-surface-variant/30" />
+                <p className="mt-3 text-sm text-on-surface-variant">No bank accounts detected in SMS.</p>
+                <p className="text-xs text-on-surface-variant">You can add accounts manually on the next screen.</p>
+              </div>
+            ) : (
+              suggestions.map((s) => {
+                const selected = selectedIds.has(s.id)
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => toggleSelect(s.id)}
+                    className={`flex items-center gap-3 rounded-2xl border p-3 transition-all ${
+                      selected
+                        ? 'border-primary bg-primary-container/20'
+                        : 'border-outline-variant bg-surface hover:bg-surface-bright'
+                    }`}
+                  >
+                    <div className={`rounded-xl p-2.5 ${selected ? 'bg-primary text-on-primary' : 'bg-surface-variant text-on-surface-variant'}`}>
+                      {s.type === 'credit' ? <CreditCard size={22} /> : s.type === 'wallet' ? <Wallet size={22} /> : <Building2 size={22} />}
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <p className={`text-sm font-semibold truncate ${selected ? 'text-primary' : 'text-on-surface'}`}>
+                        {s.suggestedName}
+                      </p>
+                      <p className="text-xs text-on-surface-variant">
+                        {s.bank && <span className="font-medium">{s.bank}</span>}
+                        {s.hint && <span> • ****{s.hint}</span>}
+                        <span className="text-xs text-on-surface-variant/70"> ({s.count} messages)</span>
+                      </p>
+                    </div>
+                    {selected && <Check size={20} className="text-primary" />}
+                  </button>
+                )
+              })
+            )}
+          </div>
+
+          <div className="shrink-0 space-y-3 pt-3">
+            <button
+              onClick={handleContinue}
+              disabled={selectedIds.size === 0 && suggestions.length > 0}
+              className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-on-primary disabled:opacity-50"
+            >
+              {selectedIds.size > 0 ? `Add ${selectedIds.size} account${selectedIds.size > 1 ? 's' : ''}` : 'Add selected'}
+            </button>
+            <button
+              onClick={() => nextScreen('accounts')}
+              className="w-full rounded-2xl border border-outline-variant bg-surface py-4 text-base font-semibold text-on-surface"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const AccountsScreen = () => {
     return (
-      <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
+      <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-20 pb-6">
         {renderProgress()}
         <div className="mx-auto flex h-full w-full max-w-sm flex-col">
           <div className="mb-4 shrink-0 text-center">
@@ -821,7 +983,7 @@ export default function Onboarding({ onComplete }) {
   }
 
   const GoalScreen = () => (
-    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
+    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-20 pb-6">
       {renderProgress()}
       <div className="mx-auto flex h-full w-full max-w-sm flex-col">
         <div className="mb-4 shrink-0 text-center">
@@ -953,20 +1115,22 @@ function PermissionsScreen({ onFinish }) {
     setFinishing(true)
     store.updateSettings({
       smsAutoImportEnabled: smsAutoImport && accountsExist,
-      notificationsEnabled: notificationsEnabled
+      notificationsEnabled: notificationsEnabled,
+      reportHour: 20,
+      reportMinute: 0
     })
     await onFinish()
   }
 
   return (
-    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-16 pb-6">
-      <div className="absolute top-0 left-0 right-0 z-10 px-6 pt-6">
+    <div className="animate-slide-up flex h-[100dvh] flex-col overflow-hidden bg-surface px-6 pt-20 pb-6">
+      <div className="safe-top absolute top-0 left-0 right-0 z-10 px-6 pb-2">
         <div className="flex items-center justify-between gap-2">
-          {Array.from({ length: 10 }).map((_, i) => (
+          {SCREENS.map((_, i) => (
             <div
               key={i}
               className={`h-1 flex-1 rounded-full transition-all duration-500 ${
-                i < 9 ? 'bg-primary' : 'bg-surface-variant'
+                i < SCREENS.indexOf('permissions') + 1 ? 'bg-primary' : 'bg-surface-variant'
               }`}
             />
           ))}

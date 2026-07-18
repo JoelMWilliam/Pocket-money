@@ -44,11 +44,11 @@ export default function TransactionItem({ transaction, onClick, onDelete }) {
       <div className="flex w-full items-stretch rounded-2xl bg-surface text-left border border-outline-variant active:bg-surface-bright">
         <button
           onClick={onClick}
-          className="flex flex-1 items-center justify-between rounded-l-2xl p-3 text-left transition-colors"
+          className="flex min-w-0 flex-1 items-center justify-between rounded-l-2xl p-3 text-left transition-colors"
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <div
-              className="rounded-xl p-2.5 shrink-0"
+              className="shrink-0 rounded-xl p-2.5"
               style={{
                 backgroundColor: isTransfer
                   ? 'var(--md-sys-color-surface-variant)'
@@ -62,30 +62,25 @@ export default function TransactionItem({ transaction, onClick, onDelete }) {
                 }}
               />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1 overflow-hidden">
               <p className="truncate text-sm font-medium text-on-surface">
                 {transaction.note || category?.name || 'Transaction'}
               </p>
-              <p className="text-xs text-on-surface-variant">
+              <p className="truncate text-xs text-on-surface-variant">
                 {formatShortDate(transaction.date)} · {account?.name || 'Unknown'}
               </p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                {transaction.receipt && (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-primary">
-                    <Receipt size={10} /> receipt
-                  </span>
-                )}
-                {transaction.splits?.length > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-primary">
-                    <Split size={10} /> split
-                  </span>
-                )}
-                {transaction.tags?.map((tag) => (
-                  <span key={tag} className="inline-flex items-center gap-1 text-[10px] text-on-surface-variant">
-                    <Tag size={10} /> {tag}
-                  </span>
-                ))}
-              </div>
+              {transaction.tags?.length > 0 && (
+                <div className="mt-0.5 flex items-center gap-1 overflow-hidden">
+                  {transaction.tags.slice(0, 2).map((tag) => (
+                    <span key={tag} className="inline-flex shrink-0 items-center gap-0.5 text-[10px] text-on-surface-variant">
+                      <Tag size={8} /> <span className="max-w-[60px] truncate">{tag}</span>
+                    </span>
+                  ))}
+                  {transaction.tags.length > 2 && (
+                    <span className="text-[10px] text-on-surface-variant">+{transaction.tags.length - 2}</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <p className={`ml-2 shrink-0 text-sm font-semibold ${amountClass}`}>

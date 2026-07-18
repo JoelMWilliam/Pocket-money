@@ -23,8 +23,16 @@
   --md-sys-color-outline-variant: #2c2c2e;
 }
 
-svg {
+svg.lucide {
   pointer-events: none;
+}
+
+.recharts-wrapper {
+  pointer-events: auto;
+}
+
+.recharts-surface {
+  pointer-events: auto;
 }
 
 * {
@@ -103,11 +111,18 @@ textarea::placeholder {
 
 /* Safe area support for notched phones */
 .safe-top {
-  padding-top: env(safe-area-inset-top);
+  padding-top: max(env(safe-area-inset-top), 2.5rem);
 }
 
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area {
+  padding-top: max(env(safe-area-inset-top), 2.5rem);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* Smooth page transitions */

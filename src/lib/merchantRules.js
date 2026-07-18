@@ -81,10 +81,96 @@ const MERCHANT_RULES = [
   { pattern: /investment|stock|bond|mf|mutual ?fund|sip|etf/i, category: 'cat-investments', merchant: 'Investment' },
 ]
 
+export const LEARNED_MERCHANTS = new Map()
+
+function normalizeMerchant(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function loadLearnedMerchants() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('learnedMerchants')
+      if (stored) {
+        const data = JSON.parse(stored)
+        Object.entries(data).forEach(([key, value]) => {
+          LEARNED_MERCHANTS.set(key, value)
+        })
+      }
+    }
+  } catch (e) {}
+}
+
+loadLearnedMerchants()
+
+const KEYWORD_FALLBACKS = {
+  'cat-transport': [new RegExp('\\b(taxi|cab|bus|train|metro|subway|railway|transit|parking|pickup|rickshaw|tuk)\\b', 'i'), new RegExp('\\b(uber|ola|lyft|grab|pickme)\\b', 'i')],
+  'cat-fuel': [new RegExp('\\b(petrol|diesel|gasoline|fuel|gas station|shell|ceypetco|lanka ioc|hpcl|bpcl)\\b', 'i')],
+  'cat-food': [new RegExp('\\b(food|restaurant|dining|lunch|dinner|breakfast|cafe|coffee|pizza|burger|fast food|biryani|dosa|kottu|hoppers|bakery)\\b', 'i')],
+  'cat-groceries': [new RegExp('\\b(grocery|supermarket|keells|cargills|arpico|laughing|vegetable|fruit|meat|fish market)\\b', 'i')],
+  'cat-shopping': [new RegExp('\\b(shopping|clothes|fashion|apparel|shoes|mall|retail|boutique|store)\\b', 'i')],
+  'cat-bills': [new RegExp('\\b(electricity|water bill|internet|broadband|phone bill|mobile bill|postpaid|dialog|slt|mobitel|hutch|airtel|bill payment)\\b', 'i')],
+  'cat-entertainment': [new RegExp('\\b(movie|cinema|theatre|theater|netflix|spotify|concert|event|game|gaming|streaming)\\b', 'i')],
+  'cat-travel': [new RegExp('\\b(hotel|booking|airbnb|flight|air ticket|travel|visa|resort|tour|trip)\\b', 'i')],
+  'cat-health': [new RegExp('\\b(hospital|clinic|pharmacy|medicine|doctor|dental|medical|healthcare|gym|fitness)\\b', 'i')],
+  'cat-education': [new RegExp('\\b(school|college|university|tuition|course|book|stationery|exam|fee|udemy|coursera)\\b', 'i')],
+  'cat-subscriptions': [new RegExp('\\b(subscription|monthly|recurring|membership|icloud|google one|adobe|office 365)\\b', 'i')],
+  'cat-gifts': [new RegExp('\\b(gift|present|bouquet|flower)\\b', 'i')],
+  'cat-donations': [new RegExp('\\b(donation|charity|temple|church|mosque|fund|relief)\\b', 'i')],
+  'cat-personal': [new RegExp('\\b(salon|spa|beauty|haircut|cosmetic|laundry|dry clean)\\b', 'i')],
+  'cat-pets': [new RegExp('\\b(pet|vet|kennel|dog|cat food)\\b', 'i')],
+  'cat-investments': [new RegExp('\\b(investment|stock|mutual fund|sip|etf|bond|fixed deposit|fd)\\b', 'i')],
+  'cat-salary': [new RegExp('\\b(salary|payroll|wage|pay day|pay slip)\\b', 'i')],
+  'cat-freelance': [new RegExp('\\b(freelance|consulting|contract|invoice|client payment)\\b', 'i')],
+  'cat-refunds': [new RegExp('\\b(refund|cashback|reversal|return)\\b', 'i')],
+  'cat-transfer': [new RegExp('\\b(transfer|withdrawal|atm|neft|rtgs|imps|upi|deposit|topup|top-up)\\b', 'i')]
+}
+
 const CATEGORY_FALLBACKS = {
-  expense: 'cat-food',
+  expense: 'cat-other',
   income: 'cat-salary',
   transfer: 'cat-transfer'
+}
+
+export function learnMerchantCategory(text, categoryId) {
+  if (!text || !categoryId) return
+  const normalized = normalizeMerchant(text)
+  LEARNED_MERCHANTS.set(normalized, categoryId)
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('learnedMerchants', JSON.stringify(Object.fromEntries(LEARNED_MERCHANTS)))
+    }
+  } catch (e) {}
+}
+
+export function guessCategoryByKeywords(text, type = 'expense') {
+  if (!text) return null
+  const lower = text.toLowerCase()
+  let best = null
+  let bestScore = 0
+  for (const [catId, patterns] of Object.entries(KEYWORD_FALLBACKS)) {
+    for (const pattern of patterns) {
+      const globalPattern = new RegExp(pattern.source, 'gi')
+      const allMatches = [...lower.matchAll(globalPattern)]
+      if (allMatches.length > 0) {
+        const score = allMatches.length
+        if (score > bestScore) {
+          bestScore = score
+          best = catId
+        }
+      }
+    }
+  }
+  // For income, only allow income categories; otherwise pick a default.
+  if (type === 'income') {
+    return best && ['cat-salary', 'cat-freelance', 'cat-refunds', 'cat-interest', 'cat-dividends', 'cat-cashback'].includes(best) ? best : 'cat-salary'
+  }
+  if (type === 'transfer') return 'cat-transfer'
+  return best
 }
 
 export function matchMerchant(text) {
@@ -119,7 +205,39 @@ export function autoCategorize(transaction) {
       categorizationConfidence: match.confidence
     }
   }
-  return transaction
+
+  const learnedKey = normalizeMerchant(transaction.merchant || text)
+  const learnedCategory = LEARNED_MERCHANTS.get(learnedKey)
+  if (learnedCategory) {
+    return {
+      ...transaction,
+      categoryId: learnedCategory,
+      merchant: transaction.merchant || 'Unknown',
+      autoCategorized: true,
+      categorizationConfidence: 0.7
+    }
+  }
+
+  const keywordCategory = guessCategoryByKeywords(text, transaction.type)
+  if (keywordCategory) {
+    return {
+      ...transaction,
+      categoryId: keywordCategory,
+      merchant: transaction.merchant || 'Unknown',
+      autoCategorized: true,
+      categorizationConfidence: 0.55
+    }
+  }
+
+  const fallback = CATEGORY_FALLBACKS[transaction.type] || 'cat-other'
+  return {
+    ...transaction,
+    categoryId: fallback,
+    merchant: transaction.merchant || 'Unknown',
+    autoCategorized: true,
+    categorizationConfidence: transaction.type === 'expense' ? 0.3 : 0.55,
+    ...(transaction.type === 'expense' && fallback === 'cat-other' ? { needsReview: true } : {})
+  }
 }
 
 export function getMerchantRules() {

@@ -95,7 +95,7 @@ function normalizeUserData(data) {
 function getEmptyUserData() {
   const now = Date.now()
   return {
-    settings: { seedColor: '#0A84FF', isDark: true, currency: 'LKR', lastBudgetMonth: null, onboardingGoal: null, onboardingComplete: false, googleDriveBackupEnabled: false, googleDriveBackupInterval: 'daily', googleDriveBackupLastAt: null, googleDriveBackupEmail: null, smsAutoImportEnabled: false, smsLastImportedAt: null, smsImportedIds: [], notificationsEnabled: false, updatedAt: now },
+    settings: { seedColor: '#0A84FF', isDark: true, currency: 'LKR', lastBudgetMonth: null, onboardingGoal: null, onboardingComplete: false, googleDriveBackupEnabled: false, googleDriveBackupInterval: 'daily', googleDriveBackupLastAt: null, googleDriveBackupEmail: null, smsAutoImportEnabled: false, smsLastImportedAt: null, smsImportedIds: [], notificationsEnabled: false, reportHour: 20, reportMinute: 0, updatedAt: now },
     accounts: [],
     categories: [
       { id: 'cat-food', name: 'Food & Dining', icon: 'Utensils', color: '#FF9500', type: 'expense', updatedAt: now },
@@ -116,6 +116,7 @@ function getEmptyUserData() {
       { id: 'cat-pets', name: 'Pets', icon: 'PawPrint', color: '#FF9500', type: 'expense', updatedAt: now },
       { id: 'cat-subscriptions', name: 'Subscriptions', icon: 'CreditCard', color: '#5E5CE6', type: 'expense', updatedAt: now },
       { id: 'cat-investments', name: 'Investments', icon: 'TrendingUp', color: '#30D158', type: 'expense', updatedAt: now },
+      { id: 'cat-other', name: 'Other', icon: 'HelpCircle', color: '#8E8E93', type: 'expense', updatedAt: now },
       { id: 'cat-salary', name: 'Salary', icon: 'Banknote', color: '#30D158', type: 'income', updatedAt: now },
       { id: 'cat-freelance', name: 'Freelance', icon: 'Briefcase', color: '#64D2FF', type: 'income', updatedAt: now },
       { id: 'cat-refunds', name: 'Refunds', icon: 'RotateCcw', color: '#0A84FF', type: 'income', updatedAt: now },

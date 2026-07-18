@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, PiggyBank, Lightbulb, Calendar, AlertCircle, User, Plus, X, GripVertical, BarChart3, Target, CreditCard, Sparkles, Layout } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, PiggyBank, Lightbulb, Calendar, AlertCircle, User, Plus, X, GripVertical, BarChart3, PieChart as PieChartIcon, Target, CreditCard, Sparkles, Layout } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, getCurrentMonth } from '../lib/utils'
 import TransactionItem from './TransactionItem'
 import UserSwitcher from './UserSwitcher'
 import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
-import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Cell, PieChart, Pie } from 'recharts'
+import { AppleBarChart, AppleDonutChart } from './ChartKit'
+import DashboardTipCard, { TipsDiscover } from './Tips'
 
 const DEFAULT_CARDS = ['balance', 'safeToSpend', 'insights', 'recentTransactions', 'accounts', 'goals', 'upcomingBills']
 
@@ -18,12 +19,13 @@ const AVAILABLE_CARDS = [
   { id: 'goals', name: 'Goals', icon: Target },
   { id: 'upcomingBills', name: 'Upcoming Bills', icon: Calendar },
   { id: 'spendingChart', name: 'Spending Chart', icon: BarChart3 },
-  { id: 'categoryPie', name: 'Category Breakdown', icon: PieChart },
+  { id: 'categoryPie', name: 'Category Breakdown', icon: PieChartIcon },
 ]
 
 export default function Dashboard({ setScreen, onAddTransaction }) {
   useRegisterQuickAdd(onAddTransaction)
   const [editing, setEditing] = useState(false)
+  const [discoverOpen, setDiscoverOpen] = useState(false)
   const { auth, accounts, transactions, goals, budgets, categories, recurring, getMonthlyTotals, getTotalBalance, settings, updateSettings } =
     useAppStore()
 
@@ -128,33 +130,76 @@ export default function Dashboard({ setScreen, onAddTransaction }) {
       case 'spendingChart':
         return (
           <section key="spendingChart" className="mb-5 rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
-            <h2 className="mb-3 text-base font-semibold text-on-surface">Spending (7 days)</h2>
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={Array.from({ length: 7 }, (_, i) => {
-                const d = new Date(Date.now() - (6 - i) * 86400000).toISOString().slice(0, 10)
-                const amt = transactions.filter((t) => t.type === 'expense' && t.date === d).reduce((s, t) => s + t.amount, 0)
-                return { day: new Date(d).toLocaleDateString('en-US', { weekday: 'short' }), amount: amt }
-              })} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--md-sys-color-on-surface-variant)' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: 'var(--md-sys-color-surface)', border: '1px solid var(--md-sys-color-outline-variant)', borderRadius: 12, fontSize: 12 }} formatter={(v) => formatLKR(v)} />
-                <Bar dataKey="amount" fill="var(--md-sys-color-primary)" radius={[4, 4, 0, 0]} animationDuration={800} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-on-surface">Spending (7 days)</h2>
+              <span className="text-[10px] font-medium uppercase tracking-wider text-on-surface-variant">This week</span>
+            </div>
+            <AppleBarChart
+              data={Array.from({ length: 7 }, (_, i) => {
+                const date = new Date()
+                date.setDate(date.getDate() - (6 - i))
+                const d = date.toISOString().slice(0, 10)
+                const amt = transactions
+                  .filter((t) => t.type === 'expense' && t.date.startsWith(d))
+                  .reduce((s, t) => s + t.amount, 0)
+                return { label: date.toLocaleDateString('en-US', { weekday: 'short' }), amount: amt, date: d }
+              })}
+              dataKey="amount"
+              xKey="label"
+              height={170}
+              color="var(--md-sys-color-primary)"
+              radius={9}
+              formatValue={(v) => formatLKR(v)}
+              formatLabel={(label, payload) => payload?.[0]?.payload?.date || label}
+              onBarClick={() => setScreen('transactions')}
+            />
           </section>
         )
-      case 'categoryPie':
+case 'categoryPie':
         return (
           <section key="categoryPie" className="mb-5 rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
             <h2 className="mb-3 text-base font-semibold text-on-surface">Category Breakdown</h2>
             {Object.keys(insights.byCategory).length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={Object.entries(insights.byCategory).map(([id, amt]) => ({ name: categories.find((c) => c.id === id)?.name || 'Other', value: amt, color: categories.find((c) => c.id === id)?.color || '#8E8E93' }))} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} animationDuration={800}>
-                    {Object.entries(insights.byCategory).map(([id], i) => <Cell key={i} fill={categories.find((c) => c.id === id)?.color || '#8E8E93'} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: 'var(--md-sys-color-surface)', border: '1px solid var(--md-sys-color-outline-variant)', borderRadius: 12, fontSize: 12 }} formatter={(v) => formatLKR(v)} />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="flex items-center gap-4">
+                <div className="w-1/2">
+                  <AppleDonutChart
+                    height={180}
+                    innerRadius={48}
+                    outerRadius={72}
+                    paddingAngle={3}
+                    data={Object.entries(insights.byCategory).map(([id, amt]) => ({
+                      name: categories.find((c) => c.id === id)?.name || 'Other',
+                      value: amt,
+                      color: categories.find((c) => c.id === id)?.color || '#8E8E93',
+                      id
+                    }))}
+                    formatValue={(v) => formatLKR(v)}
+                    onClick={() => setScreen('categories')}
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  {Object.entries(insights.byCategory)
+                    .sort(([, a], [, b]) => b - a)
+                    .slice(0, 5)
+                    .map(([id, amt]) => {
+                      const cat = categories.find((c) => c.id === id)
+                      const total = Object.values(insights.byCategory).reduce((s, v) => s + v, 0)
+                      const pct = total > 0 ? Math.round((amt / total) * 100) : 0
+                      return (
+                        <div key={id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: cat?.color || '#8E8E93' }} />
+                            <p className="text-xs text-on-surface truncate max-w-[80px]">{cat?.name || 'Other'}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-semibold text-on-surface">{formatLKR(amt)}</p>
+                            <p className="text-[10px] text-on-surface-variant">{pct}%</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
             ) : <p className="py-8 text-center text-sm text-on-surface-variant">No spending this month.</p>}
           </section>
         )
@@ -270,8 +315,13 @@ export default function Dashboard({ setScreen, onAddTransaction }) {
       )}
 
       <div className="stagger-children">
+        <DashboardTipCard setScreen={setScreen} onOpenDiscover={() => setDiscoverOpen(true)} />
         {cardOrder.map((cardId) => renderCard(cardId))}
       </div>
+
+      {discoverOpen && (
+        <TipsDiscover onClose={() => setDiscoverOpen(false)} setScreen={setScreen} />
+      )}
     </div>
   )
 }

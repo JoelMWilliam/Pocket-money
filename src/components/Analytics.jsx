@@ -1,14 +1,5 @@
 import { useMemo, useState } from 'react'
-import {
-  ResponsiveContainer,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  LineChart,
-  Line
-} from 'recharts'
+import { AppleLineChart, AppleMultiBarChart } from './ChartKit'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, getCurrentMonth } from '../lib/utils'
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react'
@@ -71,7 +62,6 @@ export default function Analytics() {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       months.push({ key: d.toISOString().slice(0, 7), label: d.toLocaleDateString('en-GB', { month: 'short' }) })
     }
-
     const expenseCategories = categories.filter((c) => c.type === 'expense')
     const data = months.map((m) => {
       const row = { month: m.label }
@@ -82,7 +72,6 @@ export default function Analytics() {
       })
       return row
     })
-
     const totals = expenseCategories
       .map((c) => ({
         id: c.id,
@@ -91,7 +80,6 @@ export default function Analytics() {
         total: transactions.filter((t) => t.type === 'expense' && t.categoryId === c.id).reduce((sum, t) => sum + t.amount, 0)
       }))
       .sort((a, b) => b.total - a.total)
-
     return { data, topCategories: totals.slice(0, 4) }
   }, [transactions, categories])
 
@@ -100,7 +88,6 @@ export default function Analytics() {
     const currentKey = now.toISOString().slice(0, 7)
     const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const prevKey = prev.toISOString().slice(0, 7)
-
     return categories
       .filter((c) => c.type === 'expense')
       .map((c) => {
@@ -130,39 +117,39 @@ export default function Analytics() {
           type="month"
           value={month}
           onChange={(e) => setMonth(e.target.value)}
-          className="rounded-xl border border-outline-variant bg-surface px-4 py-2 text-sm text-on-surface"
+          className="rounded-2xl border border-outline-variant bg-surface px-4 py-2.5 text-sm text-on-surface"
         />
       </div>
 
       <section className="mb-5 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-surface p-4 border border-outline-variant">
+        <div className="rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
           <p className="text-xs text-on-surface-variant">Income</p>
-          <p className="mt-1 text-lg font-bold text-primary">{formatLKR(monthlyTotals.income)}</p>
+          <p className="mt-1 text-xl font-bold text-primary">{formatLKR(monthlyTotals.income)}</p>
         </div>
-        <div className="rounded-2xl bg-surface p-4 border border-outline-variant">
+        <div className="rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
           <p className="text-xs text-on-surface-variant">Expenses</p>
-          <p className="mt-1 text-lg font-bold text-on-surface">{formatLKR(monthlyTotals.expense)}</p>
+          <p className="mt-1 text-xl font-bold text-on-surface">{formatLKR(monthlyTotals.expense)}</p>
         </div>
       </section>
 
       {categoryData.length > 0 && (
-        <section className="mb-5 rounded-2xl bg-surface p-4 border border-outline-variant">
+        <section className="mb-5 rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
           <h2 className="mb-3 text-base font-semibold text-on-surface">Spending by Category</h2>
           <div className="space-y-3">
             {categoryData.slice(0, 6).map((item) => {
               const percent = monthlyTotals.expense > 0 ? (item.value / monthlyTotals.expense) * 100 : 0
               return (
                 <div key={item.name}>
-                  <div className="mb-1 flex items-center justify-between text-sm">
+                  <div className="mb-1.5 flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
                       <span className="truncate text-on-surface">{item.name}</span>
                     </div>
                     <span className="shrink-0 font-medium text-on-surface">{formatLKR(item.value)}</span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface-variant">
                     <div
-                      className="h-full rounded-full"
+                      className="h-full rounded-full transition-all animate-progress-fill"
                       style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: item.color }}
                     />
                   </div>
@@ -173,47 +160,29 @@ export default function Analytics() {
         </section>
       )}
 
-      <section className="mb-5 rounded-2xl bg-surface p-4 border border-outline-variant">
+      <section className="mb-5 rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
         <h2 className="mb-3 text-base font-semibold text-on-surface">Category Trends</h2>
-        <div className="h-44">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={categoryTrends.data} margin={{ top: 5, right: 0, bottom: 0, left: -24 }}>
-              <XAxis dataKey="month" stroke="#8e8e93" fontSize={10} tickLine={false} axisLine={false} />
-              <YAxis
-                stroke="#8e8e93"
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-                width={40}
-                tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #38383a',
-                  borderRadius: '12px',
-                  color: '#e3e3e3'
-                }}
-                formatter={(value) => formatLKR(value)}
-                labelStyle={{ color: '#e3e3e3' }}
-              />
-              {categoryTrends.topCategories.map((c) => (
-                <Line
-                  key={c.id}
-                  type="monotone"
-                  dataKey={c.name}
-                  stroke={c.color}
-                  strokeWidth={2}
-                  dot={false}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <AppleLineChart
+          data={categoryTrends.data}
+          height={180}
+          xKey="month"
+          series={categoryTrends.topCategories.map((c) => ({ key: c.name, name: c.name, color: c.color }))}
+          formatValue={(v) => formatLKR(v)}
+        />
+        {categoryTrends.topCategories.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-3">
+            {categoryTrends.topCategories.map((c) => (
+              <div key={c.id} className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
+                {c.name}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {categoryChange.length > 0 && (
-        <section className="mb-5 rounded-2xl bg-surface p-4 border border-outline-variant">
+        <section className="mb-5 rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
           <h2 className="mb-3 text-base font-semibold text-on-surface">Month-over-Month Changes</h2>
           <div className="space-y-3">
             {categoryChange.map((c) => (
@@ -237,35 +206,24 @@ export default function Analytics() {
         </section>
       )}
 
-      <section className="mb-24 rounded-2xl bg-surface p-4 border border-outline-variant">
-        <h2 className="mb-3 text-base font-semibold text-on-surface">6 Month Trend</h2>
-        <div className="h-44">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={last6Months} margin={{ top: 5, right: 0, bottom: 0, left: -24 }}>
-              <XAxis dataKey="month" stroke="#8e8e93" fontSize={10} tickLine={false} axisLine={false} />
-              <YAxis
-                stroke="#8e8e93"
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-                width={40}
-                tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #38383a',
-                  borderRadius: '12px',
-                  color: '#e3e3e3'
-                }}
-                formatter={(value) => formatLKR(value)}
-                labelStyle={{ color: '#e3e3e3' }}
-              />
-              <Bar dataKey="income" fill="var(--md-sys-color-primary)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expense" fill="#ff453a" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      <section className="mb-24 rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-on-surface">6 Month Trend</h2>
+          <div className="flex items-center gap-3 text-[10px] font-medium text-on-surface-variant">
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--md-sys-color-primary)' }} />Income</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--md-sys-color-error)' }} />Expenses</span>
+          </div>
         </div>
+        <AppleMultiBarChart
+          data={last6Months}
+          height={180}
+          xKey="month"
+          series={[
+            { key: 'income', name: 'Income', color: 'var(--md-sys-color-primary)' },
+            { key: 'expense', name: 'Expenses', color: 'var(--md-sys-color-error)' }
+          ]}
+          formatValue={(v) => formatLKR(v)}
+        />
       </section>
     </div>
   )

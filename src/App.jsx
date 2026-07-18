@@ -32,7 +32,8 @@ import AdvancedReports from './components/AdvancedReports'
 import CashFlow from './components/CashFlow'
 import Assistant from './components/Assistant'
 import DailyReport from './components/DailyReport'
-import { maybeAutoImportSms } from './lib/sms'
+import { maybeAutoImportSms, checkSmsPermissionHealth } from './lib/sms'
+import { LocalNotifications } from '@capacitor/local-notifications'
 import { isGoogleDriveConfigured, initializeGoogleAuth } from './lib/googleDrive'
 
 const SCREENS = {
@@ -85,6 +86,18 @@ export default function App() {
     let removeListener = null
     CapApp.addListener('appUrlOpen', (event) => {
       if (event.url && event.url.includes('dailyreport')) {
+        setScreen('dailyreport')
+      }
+    }).then((l) => { removeListener = l })
+    return () => { if (removeListener) removeListener.remove() }
+  }, [])
+
+  // Local notification tap → deep-link into the day-view Daily Report screen.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    let removeListener = null
+    LocalNotifications.addListener('localNotificationReceived', (notif) => {
+      if (notif?.extra?.report || notif?.extra?.recurring || notif?.id === 999999) {
         setScreen('dailyreport')
       }
     }).then((l) => { removeListener = l })
@@ -213,6 +226,16 @@ export default function App() {
       try {
         const state = useAppStore.getState()
         if (!state.auth.currentUser) return
+        // Foreground check: if the OS has revoked/restricted SMS permission
+        // in the background, surface a warning instead of silently no-op'ing.
+        if (state.settings.smsAutoImportEnabled) {
+          const health = await checkSmsPermissionHealth()
+          if (!health.healthy && health.reason !== 'non-native') {
+            state.updateSettings({ smsPermissionHealthy: false, smsPermissionIssue: health.reason })
+          } else {
+            state.updateSettings({ smsPermissionHealthy: true, smsPermissionIssue: null })
+          }
+        }
         await maybeAutoImportSms(state)
       } catch (e) {
         // eslint-disable-next-line no-console
@@ -259,7 +282,7 @@ export default function App() {
 
   return (
     <div className="relative flex h-[100dvh] flex-col bg-surface">
-      <div className="scroll-container flex-1 no-scrollbar safe-top pb-28" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
+      <div className="scroll-container safe-top flex-1 no-scrollbar" style={{ paddingBottom: 'calc(6.5rem + env(safe-area-inset-bottom))' }}>
         <ScreenComponent setScreen={setScreen} onAddTransaction={() => setQuickAddOpen(true)} />
       </div>
       <QuickAddButton />

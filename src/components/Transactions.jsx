@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Search, SlidersHorizontal, X, Trash2, Tags, CheckSquare, Square, Check } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { RegisterModal } from './ModalRoot'
 import TransactionItem from './TransactionItem'
 import AddTransaction from './AddTransaction'
 import TagInput from './TagInput'
+import { consumePendingAccountFilter } from '../lib/navigationState'
 
 const FILTERS = ['all', 'income', 'expense', 'transfer']
 
@@ -28,6 +29,14 @@ export default function Transactions({ onAddTransaction }) {
   const [bulkMode, setBulkMode] = useState(false)
   const [bulkCategory, setBulkCategory] = useState('')
   const [bulkTags, setBulkTags] = useState([])
+
+  useEffect(() => {
+    const pending = consumePendingAccountFilter()
+    if (pending) {
+      setAccountFilter(pending)
+      setShowFilters(true)
+    }
+  }, [])
 
   const activeFilterCount = [
     filter !== 'all',

@@ -63,7 +63,8 @@ export const DEMO_CATEGORIES = [
   { id: 'cat-health', name: 'Health', icon: 'HeartPulse', color: '#30D158', type: 'expense', updatedAt: Date.now() },
   { id: 'cat-salary', name: 'Salary', icon: 'Banknote', color: '#30D158', type: 'income', updatedAt: Date.now() },
   { id: 'cat-gifts', name: 'Gifts', icon: 'Gift', color: '#64D2FF', type: 'income', updatedAt: Date.now() },
-  { id: 'cat-transfer', name: 'Transfer', icon: 'ArrowLeftRight', color: '#8E8E93', type: 'transfer', updatedAt: Date.now() }
+  { id: 'cat-transfer', name: 'Transfer', icon: 'ArrowLeftRight', color: '#8E8E93', type: 'transfer', updatedAt: Date.now() },
+  { id: 'cat-other', name: 'Other', icon: 'HelpCircle', color: '#8E8E93', type: 'expense', updatedAt: Date.now() }
 ]
 
 let txTimestamp = Date.now() - 1000 * 60 * 60 * 24 * 35

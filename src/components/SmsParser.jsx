@@ -10,6 +10,8 @@ import {
   parseSmsTransaction,
   isNativeSmsAvailable
 } from '../lib/sms'
+import { autoCategorize } from '../lib/merchantRules'
+import { extractReferenceNumber } from '../lib/sms'
 import { useRegisterModal } from '../contexts/ModalContext'
 
 export { parseSmsTransaction }
@@ -96,22 +98,68 @@ export default function SmsParser({ onClose }) {
     }
   }
 
-  const handleImportManual = () => {
+  const handleImportManual = async () => {
     if (!manualParsed) return
-    importSmsMessages([{ id: 'manual', body: manualText, date: new Date().toISOString(), parsed: manualParsed }], store)
-    onClose()
+    setImporting(true)
+    const res = await importSmsMessages([{ id: 'manual', body: manualText, date: new Date().toISOString(), parsed: manualParsed }], store)
+    setImporting(false)
+    showResultSummary(res)
+    const ok = res.imported.length > 0
+    if (ok || res.unmatched.length === 0) onClose()
   }
 
   const toggleSelect = (id) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
-  const handleImport = () => {
+  const [importSummary, setImportSummary] = useState(null)
+
+  const showResultSummary = (res) => {
+    if (!res) return
+    const lines = []
+    if (res.imported.length > 0) lines.push(`Imported ${res.imported.length}`)
+    if (res.duplicates.length > 0) lines.push(`Duplicates skipped ${res.duplicates.length}`)
+    if (res.unmatched.length > 0) lines.push(`Unmatched ${res.unmatched.length}`)
+    if (res.errors.length > 0) lines.push(`Errors ${res.errors.length}`)
+    setImportSummary({
+      text: lines.join(' · '),
+      details: res,
+      unmatchedList: res.unmatched
+    })
+  }
+
+  const handleImport = async () => {
     setImporting(true)
     const toImport = messages.filter((m) => selected.includes(m.id))
-    importSmsMessages(toImport, store)
+    const res = await importSmsMessages(toImport, store)
     setImporting(false)
-    onClose()
+    showResultSummary(res)
+    if (res.unmatched.length === 0 && res.errors.length === 0 && res.duplicates.length === 0) {
+      onClose()
+    }
+  }
+
+  // Manually assign an unmatched SMS to an account.
+  const handleAssignUnmatched = async (item, accountId) => {
+    if (!accountId) return
+    const parsed = item.parsed
+    const prefill = {
+      accountId,
+      amount: parsed.amount,
+      type: parsed.type,
+      date: item.date,
+      note: parsed.note,
+      tags: ['sms-import', 'manual-assign'],
+      smsAddress: item.address || '',
+      smsRefNo: extractReferenceNumber(item.body) || null
+    }
+    const categorized = autoCategorize(prefill)
+    store.addTransaction(categorized)
+    setImportSummary((prev) => {
+      if (!prev) return prev
+      const remaining = prev.unmatchedList.filter((u) => u.messageId !== item.messageId)
+      return { ...prev, unmatchedList: remaining }
+    })
   }
 
   const handleToggleAutoImport = async () => {
@@ -280,6 +328,48 @@ export default function SmsParser({ onClose }) {
             >
               {importing ? 'Importing...' : `Import ${selected.length} Transactions`}
             </button>
+          )}
+
+          {importSummary && (
+            <div className="mt-4 rounded-2xl border border-outline-variant bg-surface p-4">
+              <p className="text-sm font-semibold text-on-surface">{importSummary.text}</p>
+              {importSummary.unmatchedList.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  <p className="text-xs text-on-surface-variant">These couldn't be matched automatically. Pick an account for each.</p>
+                  {importSummary.unmatchedList.map((u) => {
+                    const candidates = (store.accounts || []).filter((a) =>
+                      !u.candidateAccountIds?.length || u.candidateAccountIds.includes(a.id)
+                    )
+                    return (
+                      <div key={u.messageId} className="rounded-xl border border-outline-variant bg-surface p-3">
+                        <p className="text-sm font-medium text-on-surface truncate">{u.parsed?.note || 'Untitled'}</p>
+                        <p className="text-xs text-on-surface-variant">{formatLKR(u.parsed?.amount || 0)} · {u.parsed?.type}</p>
+                        <p className="mt-1 text-[10px] text-on-surface-variant/80">{u.reason}</p>
+                        <select
+                          defaultValue=""
+                          onChange={(e) => { if (e.target.value) handleAssignUnmatched(u, e.target.value) }}
+                          className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-bright px-3 py-2 text-xs text-on-surface"
+                        >
+                          <option value="">Assign to account…</option>
+                          {candidates.map((a) => (
+                            <option key={a.id} value={a.id}>{a.name}</option>
+                          ))}
+                          {store.accounts.filter((a) => !candidates.includes(a)).map((a) => (
+                            <option key={a.id} value={a.id}>{a.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <button
+                onClick={() => { setImportSummary(null); onClose() }}
+                className="mt-3 w-full rounded-xl bg-primary py-2.5 text-xs font-semibold text-on-primary"
+              >
+                Done
+              </button>
+            </div>
           )}
         </div>
       </div>

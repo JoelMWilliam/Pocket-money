@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Wallet2, Building2, Banknote, CreditCard, Landmark, X, CheckCircle2, Scale, FileUp, Lock } from 'lucide-react'
+import { Wallet2, Building2, Banknote, CreditCard, Landmark, X, CheckCircle2, Scale, FileUp, Lock, Pencil } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR, generateId } from '../lib/utils'
 import { getIcon } from '../lib/icons'
 import { parsePDFText, extractStatementBalance } from '../lib/pdfParser'
 import { encryptAccountNumber, decryptAccountNumber, maskAccountNumber } from '../lib/accountNumber'
+import { setPendingAccountFilter } from '../lib/navigationState'
 
 import ModalRoot from './ModalRoot'
 
@@ -20,7 +21,7 @@ const ACCOUNT_ICONS = ['Building2', 'Banknote', 'Wallet2', 'CreditCard', 'Landma
 
 import { useRegisterQuickAdd } from '../contexts/QuickAddContext'
 
-export default function Accounts() {
+export default function Accounts({ setScreen }) {
   useRegisterQuickAdd(() => openNew())
   const { accounts, addAccount, updateAccount, deleteAccount, reconcileAccount } = useAppStore()
   const [showForm, setShowForm] = useState(false)
@@ -155,7 +156,7 @@ export default function Accounts() {
               className="flex w-full items-center justify-between rounded-2xl bg-surface p-4 border border-outline-variant"
             >
               <button
-                onClick={() => openEdit(account)}
+                onClick={() => { setPendingAccountFilter(account.id); setScreen?.('transactions') }}
                 className="flex flex-1 items-center gap-3 text-left min-w-0 active:bg-surface-bright"
               >
                 <div
@@ -182,16 +183,26 @@ export default function Accounts() {
                   </div>
                 </div>
               </button>
-              <div className="flex-shrink-0 text-right ml-3">
-                <p className="text-base font-semibold text-on-surface">{formatLKR(account.balance)}</p>
+              <div className="flex-shrink-0 text-right ml-3 flex items-center gap-2">
                 <button
                   type="button"
-                  aria-label={`Reconcile ${account.name}`}
-                  onClick={(e) => { e.stopPropagation(); openReconcile(account) }}
-                  className="mt-1 text-xs text-primary"
+                  aria-label={`Edit ${account.name}`}
+                  onClick={(e) => { e.stopPropagation(); openEdit(account) }}
+                  className="rounded-full p-2 text-on-surface-variant hover:bg-surface-bright"
                 >
-                  Reconcile
+                  <Pencil size={16} />
                 </button>
+                <div>
+                  <p className="text-base font-semibold text-on-surface">{formatLKR(account.balance)}</p>
+                  <button
+                    type="button"
+                    aria-label={`Reconcile ${account.name}`}
+                    onClick={(e) => { e.stopPropagation(); openReconcile(account) }}
+                    className="mt-1 text-xs text-primary"
+                  >
+                    Reconcile
+                  </button>
+                </div>
               </div>
             </div>
           )

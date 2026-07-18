@@ -49,7 +49,7 @@ export default function AuthScreen() {
   }
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center bg-surface px-6 py-12">
+    <div className="flex min-h-full flex-col items-center justify-center bg-surface px-6 py-12 safe-top">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-container">

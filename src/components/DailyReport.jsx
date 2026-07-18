@@ -2,10 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { TrendingUp, TrendingDown, Wallet, ArrowRight, Calendar, Sparkles, Award, AlertCircle } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR } from '../lib/utils'
-import {
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip,
-  PieChart, Pie, Cell, AreaChart, Area, LineChart, Line, CartesianGrid
-} from 'recharts'
+import { AppleMultiBarChart, AppleDonutChart } from './ChartKit'
 
 const REPORT_COLORS = ['#0A84FF', '#30D158', '#FF9500', '#BF5AF2', '#FF375F', '#64D2FF', '#FFCC00', '#5E5CE6']
 
@@ -171,47 +168,39 @@ export default function DailyReport({ onClose }) {
           </div>
 
           {data.dailyData.length > 1 && (
-            <div className="mb-4 rounded-3xl bg-surface p-6 border border-outline-variant">
+            <div className="mb-4 rounded-3xl bg-surface p-6 border border-outline-variant card-lift">
               <h2 className="mb-4 text-base font-semibold text-on-surface">Daily Breakdown</h2>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={data.dailyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline-variant)" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--md-sys-color-on-surface-variant)' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: 'var(--md-sys-color-on-surface-variant)' }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ background: 'var(--md-sys-color-surface)', border: '1px solid var(--md-sys-color-outline-variant)', borderRadius: 12, fontSize: 12 }}
-                    formatter={(v) => formatLKR(v)}
-                  />
-                  <Bar dataKey="expense" fill="var(--md-sys-color-error)" radius={[4, 4, 0, 0]} animationDuration={800} />
-                  <Bar dataKey="income" fill="var(--md-sys-color-primary)" radius={[4, 4, 0, 0]} animationDuration={800} animationBegin={200} />
-                </BarChart>
-              </ResponsiveContainer>
+              <AppleMultiBarChart
+                data={data.dailyData}
+                height={200}
+                xKey="label"
+                series={[
+                  { key: 'expense', name: 'Expenses', color: 'var(--md-sys-color-error)' },
+                  { key: 'income', name: 'Income', color: 'var(--md-sys-color-primary)' }
+                ]}
+                formatValue={(v) => formatLKR(v)}
+              />
             </div>
           )}
 
           {data.categoryBreakdown.length > 0 && (
-            <div className="mb-4 rounded-3xl bg-surface p-6 border border-outline-variant">
+            <div className="mb-4 rounded-3xl bg-surface p-6 border border-outline-variant card-lift">
               <h2 className="mb-4 text-base font-semibold text-on-surface">Where Your Money Went</h2>
               <div className="flex items-center gap-4">
-                <ResponsiveContainer width="50%" height={160}>
-                  <PieChart>
-                    <Pie
-                      data={data.categoryBreakdown.slice(0, 6)}
-                      dataKey="amount"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={70}
-                      paddingAngle={2}
-                      animationDuration={800}
-                    >
-                      {data.categoryBreakdown.slice(0, 6).map((entry, i) => (
-                        <Cell key={i} fill={entry.color || REPORT_COLORS[i % REPORT_COLORS.length]} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="w-1/2">
+                  <AppleDonutChart
+                    height={160}
+                    innerRadius={42}
+                    outerRadius={66}
+                    paddingAngle={3}
+                    data={data.categoryBreakdown.slice(0, 6).map((entry, i) => ({
+                      name: entry.name,
+                      value: entry.amount,
+                      color: entry.color || REPORT_COLORS[i % REPORT_COLORS.length]
+                    }))}
+                    formatValue={(v) => formatLKR(v)}
+                  />
+                </div>
                 <div className="flex-1 space-y-2">
                   {data.categoryBreakdown.slice(0, 5).map((c, i) => (
                     <div key={i} className="flex items-center justify-between">

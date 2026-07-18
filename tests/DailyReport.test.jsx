@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { parseSmsTransaction, isBankAlert } from '../src/lib/sms'
+import { parseSmsTransaction } from '../src/lib/sms'
 
 describe('DailyReport - SMS parsing for report data', () => {
   it('parses a debit SMS correctly', () => {

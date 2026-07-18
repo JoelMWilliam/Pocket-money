@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { AppleDonutChart } from './ChartKit'
 import { TrendingUp, Wallet, CreditCard, Landmark, Gem, Home, Car, ArrowRightLeft } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLKR } from '../lib/utils'
@@ -83,41 +83,21 @@ export default function NetWorth() {
       </section>
 
       {chartData.length > 0 && (
-        <section className="mb-5 rounded-2xl bg-surface p-4 border border-outline-variant">
+        <section className="mb-5 rounded-3xl bg-surface p-5 border border-outline-variant card-lift">
           <h2 className="mb-2 text-base font-semibold text-on-surface">Asset Allocation</h2>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={50}
-                  outerRadius={70}
-                  paddingAngle={2}
-                  stroke="none"
-                  onClick={(_, index) => {
-                    const type = assetsByType[index]?.type
-                    setSelectedType(selectedType === type ? null : type)
-                  }}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #38383a',
-                    borderRadius: '12px',
-                    color: '#e3e3e3'
-                  }}
-                  formatter={(value) => formatLKR(value)}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-2 flex flex-wrap justify-center gap-2">
+          <AppleDonutChart
+            height={192}
+            innerRadius={54}
+            outerRadius={78}
+            paddingAngle={3}
+            data={chartData}
+            formatValue={(v) => formatLKR(v)}
+            onClick={(_, idx) => {
+              const type = assetsByType[idx]?.type
+              if (type) setSelectedType(selectedType === type ? null : type)
+            }}
+          />
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
             {chartData.map((item, idx) => (
               <button
                 key={item.name}

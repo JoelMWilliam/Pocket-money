@@ -90,6 +90,8 @@ export default function Settings() {
   const [bioEnabling, setBioEnabling] = useState(false)
 
   const notificationsEnabled = settings.notificationsEnabled || false
+  const reportHour = settings.reportHour ?? 20
+  const reportMinute = settings.reportMinute ?? 0
 
   useEffect(() => {
     canUseBiometrics().then(setBioAvailable)
@@ -114,12 +116,21 @@ export default function Settings() {
     } else {
       const granted = await requestNotificationPermission()
       if (granted) {
-        await scheduleReportNotification(20, 0)
+        await scheduleReportNotification(reportHour, reportMinute)
         updateSettings({ notificationsEnabled: true })
-        alert('Daily reminder enabled at 8:00 PM.')
+        const h = String(reportHour).padStart(2, '0')
+        const m = String(reportMinute).padStart(2, '0')
+        alert(`Daily reminder enabled at ${h}:${m}.`)
       } else {
         alert('Notification permission denied.')
       }
+    }
+  }
+
+  const handleReportTimeChange = async (hour, minute) => {
+    updateSettings({ reportHour: hour, reportMinute: minute })
+    if (notificationsEnabled) {
+      await scheduleReportNotification(hour, minute)
     }
   }
 
@@ -468,25 +479,56 @@ export default function Settings() {
 
         <div className="my-1 h-px bg-outline-variant" />
 
-        <button
-          onClick={toggleDailyReminder}
-          className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-surface-bright"
-        >
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-primary-container p-2 text-primary">
-              <Bell size={18} />
+        <div className="rounded-xl p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-primary-container p-2 text-primary">
+                <Bell size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-on-surface">Daily Reminder</p>
+                <p className="text-xs text-on-surface-variant">
+                  {notificationsEnabled
+                    ? `Daily summary at ${String(reportHour).padStart(2, '0')}:${String(reportMinute).padStart(2, '0')}`
+                    : 'Tap to enable'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-on-surface">Daily Reminder</p>
-              <p className="text-xs text-on-surface-variant">
-                {notificationsEnabled ? 'Reminds you to log transactions at 8 PM' : 'Tap to enable'}
-              </p>
+            <button
+              onClick={toggleDailyReminder}
+              className={`relative h-7 w-12 rounded-full transition-colors ${notificationsEnabled ? 'bg-primary' : 'bg-surface-variant'}`}
+            >
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${notificationsEnabled ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+
+          {notificationsEnabled && (
+            <div className="mt-3 flex items-center gap-3">
+              <label className="text-xs font-medium text-on-surface-variant w-20">Remind at:</label>
+              <div className="flex items-center gap-1">
+                <select
+                  value={reportHour}
+                  onChange={(e) => handleReportTimeChange(Number(e.target.value), reportMinute)}
+                  className="rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
+                  ))}
+                </select>
+                <span className="text-sm text-on-surface-variant">:</span>
+                <select
+                  value={reportMinute}
+                  onChange={(e) => handleReportTimeChange(reportHour, Number(e.target.value))}
+                  className="rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
+                >
+                  {[0, 15, 30, 45].map((m) => (
+                    <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
-          <div className={`relative h-7 w-12 rounded-full transition-colors ${notificationsEnabled ? 'bg-primary' : 'bg-surface-variant'}`}>
-            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${notificationsEnabled ? 'left-6' : 'left-1'}`} />
-          </div>
-        </button>
+          )}
+        </div>
 
         <div className="my-1 h-px bg-outline-variant" />
 
